@@ -20,6 +20,7 @@ main(!IO) :-
    ;
    tape(ad_number,
 	ad_number,
+	ad_number,
 	list(ad_number),
 	list(ad_number),
 	ad_number, % ref
@@ -35,9 +36,10 @@ make_dual_number(E, X, Xprime) = Y :-
     then Y = X 
     else Y = dual_number(E, X, Xprime).
 
-:- func make_tape(ad_number, ad_number, list(ad_number), list(ad_number)) = ad_number.
-make_tape(E,X,Factors,Tapes) =
-    tape(E, X, Factors, Tapes, base(0.0), base(0.0)).
+:- func make_tape(ad_number, ad_number, ad_number, list(ad_number),
+			  list(ad_number)) = ad_number.
+make_tape(N,E,X,Factors,Tapes) =
+    tape(N, E, X, Factors, Tapes, base(0.0), base(0.0)).
 
 :- func (ad_number::in) + (ad_number::in) = (ad_number::out) is det.
 X + Y = lift_real_cross_real_to_real(func(A,B) = A+B,
@@ -80,7 +82,7 @@ lift_real_to_real(F,Dfdx,P) = Y :-
     ;
     P = dual_number(E,X,Xprime), Y = make_dual_number(E, Self(X), Dfdx(X)*Xprime)
     ;
-    P = tape(E, X, _, _, _, _), Y = make_tape(E, Self(X), [Dfdx(X)], [P])).
+    P = tape(N, E, X, _, _, _, _), Y = make_tape(N, E, Self(X), [Dfdx(X)], [P])).
 
 :- func lift_real_cross_real_to_real(func(float,float) = float,
 				     func(ad_number, ad_number) = ad_number,
@@ -99,10 +101,10 @@ lift_real_cross_real_to_real(F,Dfdx1,Dfdx2,P1,P2) = Y :-
 			else
 			Y = make_dual_number(E1, Self(X1,X2),Dfdx1(X1,X2)*X1prime+Dfdx2(X1,X2)*X2prime)))
      ;
-     P2=tape(E2,X2,_,_,_,_),
+     P2=tape(N2,E2,X2,_,_,_,_),
      (if E1<E2
 	    then 
-	    Y=make_tape(E2,Self(P1,X2),[Dfdx2(P1,X2)], [P2])
+	    Y=make_tape(N2,E2,Self(P1,X2),[Dfdx2(P1,X2)], [P2])
 	      else
 	      Y=make_dual_number(E1,Self(X1,P2),Dfdx1(X1,P2)*X1prime))
      ;
@@ -110,31 +112,31 @@ lift_real_cross_real_to_real(F,Dfdx1,Dfdx2,P1,P2) = Y :-
      Y=make_dual_number(E1,Self(X1,P2),Dfdx1(X1,P2)*X1prime))
     ;
     %%
-    P1=tape(E1,X1,_,_,_,_),
+    P1=tape(N1,E1,X1,_,_,_,_),
     (P2=dual_number(E2,X2,X2prime),
      (if E1<E2 then
 	    Y = make_dual_number(E2,Self(P1,X2), Dfdx2(P1,X2)*X2prime)
 		else
-		Y = make_tape(E1,Self(X1,P2), [Dfdx1(X1,P2)], [P1]))
+		Y = make_tape(N1,E1,Self(X1,P2), [Dfdx1(X1,P2)], [P1]))
     ;
-    P2 = tape(E2, X2, _,_,_,_),
+    P2 = tape(N2,E2, X2, _,_,_,_),
     (if E1<E2 then
-	   Y= make_tape(E2, Self(P1,X2), [Dfdx2(P1,X2)], [P2])
+	   Y= make_tape(N2,E2, Self(P1,X2), [Dfdx2(P1,X2)], [P2])
 	      else
 	      (if E2<E1 then
-		     Y= make_tape(E1, Self(X1,P2), [Dfdx1(X1,P2)], [P1]) else
-			Y=make_tape(E1, Self(X1,X2), [Dfdx1(X1,X2),Dfdx2(X1,X2)], [P1,P2])))
+		     Y= make_tape(N1, E1, Self(X1,P2), [Dfdx1(X1,P2)], [P1]) else
+			Y=make_tape(N1, E1, Self(X1,X2), [Dfdx1(X1,X2),Dfdx2(X1,X2)], [P1,P2])))
     ;
     P2=base(_),
-    Y=make_tape(E1, Self(X1,P2), [Dfdx1(X1,P2)], [P1]))
+    Y=make_tape(N1,E1, Self(X1,P2), [Dfdx1(X1,P2)], [P1]))
     ;
     %%
     P1=base(X1),
     (P2 = dual_number(E2,X2,X2prime),
      Y = make_dual_number(E2, Self(P1,X2), Dfdx2(P1,X2)*X2prime)
     ;
-    P2=tape(E2,X2,_,_,_,_),
-    Y=make_tape(E2, Self(P1,X2), [Dfdx2(P1,X2)], [P2])
+    P2=tape(N2,E2,X2,_,_,_,_),
+    Y=make_tape(N2,E2, Self(P1,X2), [Dfdx2(P1,X2)], [P2])
     ;
     P2=base(X2),
     Y=base(F(X1,X2)))).
@@ -144,15 +146,15 @@ lift_real_cross_real_to_real(F,Dfdx1,Dfdx2,P1,P2) = Y :-
 
 lift_real_cross_real_to_bool(F, P1, P2) :-
     P1 = dual_number(_, X1, _),
-    ((P2 = dual_number(_, X2, _) ; P2 = tape(_, X2, _, _, _, _)),
+    ((P2 = dual_number(_, X2, _) ; P2 = tape(_, _, X2, _, _, _, _)),
       lift_real_cross_real_to_bool(F, X1, X2)
      ;
      P2 = base(_),
      lift_real_cross_real_to_bool(F, X1, P2))
     ;
     %%
-    P1 = tape(_, X1, _, _, _, _),
-    ((P2 = dual_number(_,X2,_) ; P2 = tape(_,X2,_,_,_,_)),
+    P1 = tape(_, _, X1, _, _, _, _),
+    ((P2 = dual_number(_,X2,_) ; P2 = tape(_,_,X2,_,_,_,_)),
      lift_real_cross_real_to_bool(F, X1, X2)
     ;
     P2 = base(_),
@@ -160,7 +162,7 @@ lift_real_cross_real_to_bool(F, P1, P2) :-
     ;
     %%
     P1 = base(X1),
-    ((P2=dual_number(_,X2, _) ; P2 = tape(_, X2, _, _, _, _)),
+    ((P2=dual_number(_,X2, _) ; P2 = tape(_, _, X2, _, _, _, _)),
      lift_real_cross_real_to_bool(F, P1, X2)
     ;
     P2 = base(X2),
@@ -189,41 +191,42 @@ example1(!IO) :-
 
 :- func determine_fanout(ad_number) = ad_number.
 determine_fanout(In) = Y :-
-    if In = tape(E, X, Factors, Tapes, Fanout, Sensitivity) then
+    if In = tape(N, E, X, Factors, Tapes, Fanout, Sensitivity) then
     NewFanout = Fanout + base(1.0),
     (if NewFanout == base(1.0)
      then
      NewTapes = list.map(func(Tape) = determine_fanout(Tape), Tapes),
-     Y = tape(E, X, Factors, NewTapes, NewFanout, Sensitivity)
+     Y = tape(N, E, X, Factors, NewTapes, NewFanout, Sensitivity)
 	 else
-     Y = tape(E, X, Factors, Tapes, NewFanout, Sensitivity))
+     Y = tape(N, E, X, Factors, Tapes, NewFanout, Sensitivity))
     else Y = In. %% base(_) and dual_number(_,_,_)
 
 :- func reverse_phase(ad_number, ad_number) = ad_number.
 reverse_phase(Sensitivity1, In) = Y :-
-    if In = tape(E, X, Factors, Tapes, Fanout, Sensitivity) then
+    if In = tape(N, E, X, Factors, Tapes, Fanout, Sensitivity) then
     NewSensitivity = Sensitivity+Sensitivity1,
     NewFanout = Fanout - base(1.0),
     (if NewFanout == base(0.0)
      then
      NewTapes = list.map_corresponding(func(Factor,Tape) =
 		       reverse_phase(NewSensitivity*Factor, Tape), Factors, Tapes),
-     Y = tape(E, X, Factors, NewTapes, NewFanout, NewSensitivity)
+     Y = tape(N, E, X, Factors, NewTapes, NewFanout, NewSensitivity)
      else
-     Y = tape(E, X, Factors, Tapes, NewFanout, NewSensitivity))
+     Y = tape(N, E, X, Factors, Tapes, NewFanout, NewSensitivity))
     else Y = In. %% base(_) and dual_number(_,_,_)
 
-:- func extract_gradients(ad_number) = ad_number.
+:- func extract_gradients(ad_number) = {ad_number,ad_number}.
 
 extract_gradients(In) = Y :-
-    (In = tape(_,_,[], [], _, Sensitivity) -> Y = Sensitivity
+    (In = tape(N,_,_,[], [], _, Sensitivity) -> Y = {N,Sensitivity}
     ;
-    In = tape(_,_,_, Tapes, _, _) ->
-    Y = list.foldl(func(Item,Aggr) = Yi is det :-
-		       (Sensitivity1 = extract_gradients(Item),
-		       Yi=Aggr+Sensitivity1), Tapes, base(0.0))
+    In = tape(N2,_,_,_, Tapes, _, _) ->
+    Y = {N2,
+	 list.foldl(func(Item,Aggr) = Yi is det :-
+			({_,Sensitivity1} = extract_gradients(Item),
+			 Yi=Aggr+Sensitivity1), Tapes, base(0.0))}
     ;
-    Y=In).
+    Y={base(-1.0),In}).
 
 :- pred gradient_R((func(list(ad_number)) = ad_number)::in, list(ad_number)::in, list(ad_number)::out,
 		   io::di, io::uo) is det.
@@ -233,18 +236,21 @@ gradient_R(F,X,Y,!IO) :-
 	get_epsilon(!:Epsilon, !IO),
 	!:Epsilon = !.Epsilon + base(1.0),
 	set_epsilon(!.Epsilon, !IO),
-	Epsilon0 = !.Epsilon,	      
-	NewX = list.map(func(Xi) = make_tape(Epsilon0, Xi, [], []), X),
+	Epsilon0 = !.Epsilon,
+	Indexes = list.map(func(I) = base(float(I)), 1..length(X)),
+	NewX = list.map_corresponding(func(Xi,J) = make_tape(J, Epsilon0, Xi, [], []), X, Indexes),
 	Y1 = F(NewX),
         get_epsilon(!:Epsilon, !IO), %% Is this needed?
 	Epsilon1 = !.Epsilon,	      
-	(if Y1 = tape(E1, _, _, _, _, _),
+	(if Y1 = tape(_, E1, _, _, _, _, _),
 	 (if E1 < Epsilon1 then Tapes2 = [Y1]
 	  else
 	  Y1a = determine_fanout(Y1),
-	  reverse_phase(base(1.0),Y1a) = tape(_,_,_,Tapes2,_,_))
+	  reverse_phase(base(1.0),Y1a) = tape(_,_,_,_,Tapes2,_,_))
 	then
-	Y = list.map(extract_gradients, Tapes2)
+	Sens = list.map(extract_gradients, Tapes2),
+	Sens2 = list.sort(Sens),
+	Y = list.map(func({_,Item}) = Item, Sens2)			 
 	%% Y = Tapes2
 	else Y = []), %% base(_) and dual_number(_,_,_)
 	!:Epsilon = !.Epsilon - base(1.0),
