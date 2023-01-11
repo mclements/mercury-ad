@@ -16,7 +16,7 @@
 	ad_number, % value
 	list(ad_number), % factors
 	list(ad_number), % tape
-	ad_number, % fanout 
+	int, % fanout 
 	ad_number) % sensitivity
    ;
    base(float).
@@ -57,7 +57,7 @@ make_dual_number(E, X, Xprime) = Y :-
     else Y = dual_number(E, X, Xprime).
 
 make_tape(N,E,X,Factors,Tapes) =
-    tape(N, E, X, Factors, Tapes, base(0.0), base(0.0)).
+    tape(N, E, X, Factors, Tapes, 0, base(0.0)).
 
 X + Y = lift_real_cross_real_to_real(func(A,B) = A+B,
 				     func(_,_) = base(1.0),
@@ -216,8 +216,8 @@ examples(!IO) :-
 :- func determine_fanout(ad_number) = ad_number.
 determine_fanout(In) = Y :-
     if In = tape(N, E, X, Factors, Tapes, Fanout, Sensitivity) then
-    NewFanout = Fanout + base(1.0),
-    (if NewFanout == base(1.0)
+    NewFanout = int.(Fanout + 1),
+    (if NewFanout = 1
      then
      NewTapes = list.map(func(Tape) = determine_fanout(Tape), Tapes),
      Y = tape(N, E, X, Factors, NewTapes, NewFanout, Sensitivity)
@@ -229,8 +229,8 @@ determine_fanout(In) = Y :-
 reverse_phase(Sensitivity1, In) = Y :-
     if In = tape(N, E, X, Factors, Tapes, Fanout, Sensitivity) then
     NewSensitivity = Sensitivity+Sensitivity1,
-    NewFanout = Fanout - base(1.0),
-    (if NewFanout == base(0.0)
+    NewFanout = int.(Fanout - 1),
+    (if NewFanout = 0
      then
      NewTapes = list.map_corresponding(func(Factor,Tape) =
 		       reverse_phase(NewSensitivity*Factor, Tape), Factors, Tapes),
