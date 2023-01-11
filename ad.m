@@ -7,12 +7,12 @@
 :- pred main(io::di, io::uo) is det.
 
 :- type ad_number --->
-   dual_number(ad_number, % epsilon (used for order of derivative)
+   dual_number(int, % epsilon (used for order of derivative)
 	       ad_number, % value
 	       ad_number) % derivative
    ;
    tape(int, % variable order (new)
-	ad_number, % epsilon (used for order of derivative)
+	int, % epsilon (used for order of derivative)
 	ad_number, % value
 	list(ad_number), % factors
 	list(ad_number), % tape
@@ -21,8 +21,8 @@
    ;
    base(float).
 
-:- func make_dual_number(ad_number,ad_number,ad_number) = ad_number.
-:- func make_tape(int, ad_number, ad_number, list(ad_number),
+:- func make_dual_number(int,ad_number,ad_number) = ad_number.
+:- func make_tape(int, int, ad_number, list(ad_number),
 			  list(ad_number)) = ad_number.
 :- func (ad_number::in) + (ad_number::in) = (ad_number::out) is det.
 :- func (ad_number::in) - (ad_number::in) = (ad_number::out) is det.
@@ -49,7 +49,7 @@
 main(!IO) :- 
     examples(!IO).
 
-:- mutable(epsilon, ad_number, base(0.0), ground, [untrailed,attach_to_io_state]).
+:- mutable(epsilon, int, 0, ground, [untrailed,attach_to_io_state]).
 
 make_dual_number(E, X, Xprime) = Y :-
     if Xprime == base(0.0)
@@ -180,14 +180,14 @@ lift_real_cross_real_to_bool(F, P1, P2) :-
 derivative_F(F,X,Y,!IO) :-
     some [!Epsilon] (
 	get_epsilon(!:Epsilon, !IO),
-	!:Epsilon = !.Epsilon + base(1.0),
+	!:Epsilon = int.(!.Epsilon + 1),
 	set_epsilon(!.Epsilon, !IO),
 	Fprime = F(make_dual_number(!.Epsilon, X, base(1.0))),
 	(if Fprime = dual_number(E1, _, Yprime) then
 		     get_epsilon(!:Epsilon, !IO),
-		     (if E1 < !.Epsilon then Y = base(0.0) else Y=Yprime)
+		     (if int.(E1 < !.Epsilon) then Y = base(0.0) else Y=Yprime)
 		     else Y = base(0.0)),
-	!:Epsilon = !.Epsilon - base(1.0),
+	!:Epsilon = int.(!.Epsilon - 1),
 	set_epsilon(!.Epsilon, !IO)).
 
 :- pred examples(io::di, io::uo) is det.
@@ -256,17 +256,16 @@ extract_gradients(In,!Map) :-
 gradient_R(F,X,Y,!IO) :-
     some [!Epsilon] (
 	get_epsilon(!:Epsilon, !IO),
-	!:Epsilon = !.Epsilon + base(1.0),
+	!:Epsilon = int.(!.Epsilon + 1),
 	set_epsilon(!.Epsilon, !IO),
 	Epsilon0 = !.Epsilon,
-	%% Indexes = list.map(func(I) = base(float(I)), 1..length(X)),
 	Indexes = 1..length(X),
 	NewX = list.map_corresponding(func(Xi,J) = make_tape(J, Epsilon0, Xi, [], []), X, Indexes),
 	Y1 = F(NewX),
         get_epsilon(!:Epsilon, !IO), %% Is this needed?
 	Epsilon1 = !.Epsilon,	      
 	(if Y1 = tape(_, E1, _, _, _, _, _),
-	 (if E1 < Epsilon1 then Tape = Y1
+	 (if int.(E1 < Epsilon1) then Tape = Y1
 	  else
 	  Y1a = determine_fanout(Y1),
 	  Tape = reverse_phase(base(1.0),Y1a))
@@ -275,14 +274,14 @@ gradient_R(F,X,Y,!IO) :-
 	Y = map.values(Map1)
 	%% Y = [Tape] % for debugging
 	else Y = []), %% base(_) and dual_number(_,_,_)
-	!:Epsilon = !.Epsilon - base(1.0),
+	!:Epsilon = int.(!.Epsilon - 1),
 	set_epsilon(!.Epsilon, !IO)).
 
 :- func write_real(ad_number) = float.
 write_real(In) = Y :-
     In = dual_number(_,X,_) -> Y = write_real(X)
     ;
-    In = tape(_,X,_,_,_,_,_) -> Y = write_real(X)
+    In = tape(_,_,X,_,_,_,_) -> Y = write_real(X)
     ;
     In = base(X) -> Y = X
     ;
