@@ -1,19 +1,10 @@
 :- module ad.
 :- interface.
 :- import_module io.
-
-:- pred main(io::di, io::uo) is det.
-
-:- implementation.
 :- import_module list.
 :- import_module float.
-:- import_module bool.
-:- import_module math.
-:- import_module map.
 
-main(!IO) :- 
-    example1(!IO),
-    example2(!IO).
+:- pred main(io::di, io::uo) is det.
 
 :- type ad_number --->
    dual_number(ad_number, % epsilon (used for order of derivative)
@@ -30,48 +21,64 @@ main(!IO) :-
    ;
    base(float).
 
+:- func make_dual_number(ad_number,ad_number,ad_number) = ad_number.
+:- func make_tape(ad_number, ad_number, ad_number, list(ad_number),
+			  list(ad_number)) = ad_number.
+:- func (ad_number::in) + (ad_number::in) = (ad_number::out) is det.
+:- func (ad_number::in) - (ad_number::in) = (ad_number::out) is det.
+:- func (ad_number::in) * (ad_number::in) = (ad_number::out) is det.
+:- func (ad_number::in) / (ad_number::in) = (ad_number::out) is det.
+:- pred (ad_number::in) < (ad_number::in) is semidet.
+:- pred (ad_number::in) =< (ad_number::in) is semidet.
+:- pred (ad_number::in) > (ad_number::in) is semidet.
+:- pred (ad_number::in) >= (ad_number::in) is semidet.
+:- pred (ad_number::in) == (ad_number::in) is semidet.
+:- func exp(ad_number) = ad_number is det.
+:- func sqrt(ad_number) = ad_number is det.
+:- pred derivative_F((func(ad_number) = ad_number)::in, ad_number::in, ad_number::out,
+		     io::di, io::uo) is det.
+:- pred gradient_R((func(list(ad_number)) = ad_number)::in, list(ad_number)::in, list(ad_number)::out,
+		   io::di, io::uo) is det.
+
+:- implementation.
+:- import_module bool.
+:- import_module math.
+:- import_module map.
+:- import_module int.
+
+main(!IO) :- 
+    examples(!IO).
+
 :- mutable(epsilon, ad_number, base(0.0), ground, [untrailed,attach_to_io_state]).
 
-:- func make_dual_number(ad_number,ad_number,ad_number) = ad_number.
 make_dual_number(E, X, Xprime) = Y :-
     if Xprime == base(0.0)
     then Y = X 
     else Y = dual_number(E, X, Xprime).
 
-:- func make_tape(ad_number, ad_number, ad_number, list(ad_number),
-			  list(ad_number)) = ad_number.
 make_tape(N,E,X,Factors,Tapes) =
     tape(N, E, X, Factors, Tapes, base(0.0), base(0.0)).
 
-:- func (ad_number::in) + (ad_number::in) = (ad_number::out) is det.
 X + Y = lift_real_cross_real_to_real(func(A,B) = A+B,
 				     func(_,_) = base(1.0),
 				     func(_,_) = base(1.0), X, Y).
-:- func (ad_number::in) - (ad_number::in) = (ad_number::out) is det.
 X - Y = lift_real_cross_real_to_real(func(A,B) = A-B,
 				     func(_,_) = base(1.0),
 				     func(_,_) = base(-1.0), X, Y).
-:- func (ad_number::in) * (ad_number::in) = (ad_number::out) is det.
 X * Y = lift_real_cross_real_to_real(func(A,B) = A*B,
 				     func(_,B) = B,
 				     func(A,_) = A, X, Y).
-:- func (ad_number::in) / (ad_number::in) = (ad_number::out) is det.
 X / Y = lift_real_cross_real_to_real(func(A,B) = A/B,
 				     func(_,B) = base(1.0)/B,
 				     func(A,B) = base(0.0)-A/(B*B), X, Y).
 
-:- pred (ad_number::in) < (ad_number::in) is semidet.
 X < Y :- lift_real_cross_real_to_bool(pred(A::in,B::in) is semidet :- A < B, X, Y).
-:- pred (ad_number::in) =< (ad_number::in) is semidet.
 X =< Y :- lift_real_cross_real_to_bool(pred(A::in,B::in) is semidet :- A =< B, X, Y).
-
-:- pred (ad_number::in) == (ad_number::in) is semidet.
 X == Y :- lift_real_cross_real_to_bool((pred(A::in,B::in) is semidet :- A =< B, B =< A), X, Y).
+X > Y :- lift_real_cross_real_to_bool(pred(A::in,B::in) is semidet :- A > B, X, Y).
+X >= Y :- lift_real_cross_real_to_bool(pred(A::in,B::in) is semidet :- A >= B, X, Y).
 
-
-:- func exp(ad_number) = ad_number is det.
 exp(X) = lift_real_to_real(math.exp, exp, X).
-:- func sqrt(ad_number) = ad_number is det.
 sqrt(X) = lift_real_to_real(math.sqrt,
 			    func(B) = base(1.0)/(sqrt(B)+sqrt(B)),
 			    X).
@@ -170,7 +177,6 @@ lift_real_cross_real_to_bool(F, P1, P2) :-
     P2 = base(X2),
     call(F,X1,X2)).
 
-:- pred derivative_F((func(ad_number) = ad_number)::in, ad_number::in, ad_number::out, io::di, io::uo) is det.
 derivative_F(F,X,Y,!IO) :-
     some [!Epsilon] (
 	get_epsilon(!:Epsilon, !IO),
@@ -184,13 +190,29 @@ derivative_F(F,X,Y,!IO) :-
 	!:Epsilon = !.Epsilon - base(1.0),
 	set_epsilon(!.Epsilon, !IO)).
 
-:- pred example1(io::di, io::uo) is det.
-example1(!IO) :-
-    derivative_F(func(X) = exp(base(2.0)*X), base(1.0), Y, !IO),
-    print_line(Y, !IO),
-    print("Expected: ", !IO),
-    print_line(math.exp(2.0)*2.0, !IO).
-
+:- pred examples(io::di, io::uo) is det.
+examples(!IO) :-
+    derivative_F(func(X) = exp(base(2.0)*X), base(1.0), GradF, !IO),
+    print_line("Expected: ", !IO), print_line(base(math.exp(2.0)*2.0), !IO),
+    print_line(GradF, !IO),
+    gradient_R(func(List) = Y :-
+		   (if List=[A,B] then Y=exp(base(2.0)*A)+B else Y = base(0.0)),
+		   [base(1.0),base(3.0)], Grad0, !IO),
+    print_line("Expected: ", !IO), print_line([base(math.exp(2.0)*2.0),base(1.0)], !IO),
+    print_line(Grad0, !IO),
+    gradient_R(func(List) = Y :-
+		   (if List=[A,B] then Y=B+A*A*A else Y = base(0.0)),
+		   [base(1.1),base(2.3)], Grad, !IO),
+    print_line("Expected: ", !IO), print_line([base(3.0*1.1*1.1),base(1.0)], !IO),
+    print_line(Grad, !IO),
+    gradient_R(func(List) = Y :-
+		   (if List=[A,B] then Y=exp(B+A*A*A) else Y = base(0.0)),
+		   [base(1.1),base(2.3)], Grad2, !IO),
+    print_line("Expected: ", !IO),
+    print_line([base(math.exp(2.3+1.1*1.1*1.1)*(3.0*1.1*1.1)),
+		base(math.exp(2.3+1.1*1.1*1.1))], !IO),
+   print_line(Grad2, !IO).
+ 
 :- func determine_fanout(ad_number) = ad_number.
 determine_fanout(In) = Y :-
     if In = tape(N, E, X, Factors, Tapes, Fanout, Sensitivity) then
@@ -218,7 +240,8 @@ reverse_phase(Sensitivity1, In) = Y :-
     else Y = In. %% base(_) and dual_number(_,_,_)
 
 :- pred extract_gradients(ad_number::in,
-			  map(ad_number,ad_number)::in,map(ad_number,ad_number)::out) is det.
+			  map(ad_number,ad_number)::in,
+			  map(ad_number,ad_number)::out) is det.
 extract_gradients(In,!Map) :-
     In = tape(N,_,_,_,[],_, Sensitivity) ->
 	(if contains(!.Map, N)
@@ -229,9 +252,6 @@ extract_gradients(In,!Map) :-
     list.foldl(extract_gradients, Tapes, !Map)
     ;
     !:Map = !.Map.
-
-:- pred gradient_R((func(list(ad_number)) = ad_number)::in, list(ad_number)::in, list(ad_number)::out,
-		   io::di, io::uo) is det.
 
 gradient_R(F,X,Y,!IO) :-
     some [!Epsilon] (
@@ -257,53 +277,57 @@ gradient_R(F,X,Y,!IO) :-
 	!:Epsilon = !.Epsilon - base(1.0),
 	set_epsilon(!.Epsilon, !IO)).
 
-:- pred example2(io::di, io::uo) is det.
-example2(!IO) :-
-    gradient_R(func(List) = Y :-
-		   (if List=[A,B] then Y=exp(base(2.0)*A)+B else Y = base(0.0)),
-		   [base(1.0),base(3.0)], Grad0, !IO),
-    print_line(Grad0, !IO),
-    print("Expected: ", !IO), print_line([math.exp(2.0)*2.0,1.0], !IO),
-    gradient_R(func(List) = Y :-
-		   (if List=[A,B] then Y=B+A*A*A else Y = base(0.0)),
-		   [base(1.1),base(2.3)], Grad, !IO),
-    print_line(Grad, !IO),
-    print("Expected: ", !IO), print_line([3.0*1.1*1.1,1.0], !IO),
-    gradient_R(func(List) = Y :-
-		   (if List=[A,B] then Y=exp(B+A*A*A) else Y = base(0.0)),
-		   [base(1.1),base(2.3)], Grad2, !IO),
-    print_line(Grad2, !IO),
-    print("Expected: ", !IO), print_line([math.exp(2.3+1.1*1.1*1.1)*(3.0*1.1*1.1),math.exp(2.3+1.1*1.1*1.1)], !IO).
+:- func write_real(ad_number) = float.
+write_real(In) = Y :-
+    In = dual_number(_,X,_) -> Y = write_real(X)
+    ;
+    In = tape(_,X,_,_,_,_,_) -> Y = write_real(X)
+    ;
+    In = base(X) -> Y = X
+    ;
+    Y = 0.0. 
 
-%% let rec write_real p =
-%%   match p with (Dual_number (_, x, _)) -> ((write_real x); p)
-%%   | (Tape (_, x, _, _, _, _)) -> ((write_real x); p)
-%%   | (Base x) -> ((Printf.printf "%.18g\n" x); p)
+:- func sqr(ad_number) = ad_number.
+:- func map_n(func(int) = ad_number, int) = list(ad_number).
+:- func vplus(list(ad_number), list(ad_number)) = list(ad_number).
+:- func vminus(list(ad_number), list(ad_number)) = list(ad_number).
+:- func ktimesv(ad_number, list(ad_number)) = list(ad_number).
+:- func magnitude_squared(list(ad_number)) = ad_number.
+:- func magnitude(list(ad_number)) = ad_number.
+:- func distance_squared(list(ad_number),list(ad_number)) = ad_number.
+:- func distance(list(ad_number),list(ad_number)) = ad_number.
 
-%% let sqr x = x*.x
+sqr(X) = X*X.
+map_n(F,N) = list.map(func(I) = F(I), 1..N).
+vplus(A,B) = list.map_corresponding(func(Ai,Bi) = Ai+Bi, A, B).
+vminus(A,B) = list.map_corresponding(func(Ai,Bi) = Ai-Bi, A, B).
+ktimesv(K,V) = list.map(func(Vi) = Vi*K, V).
+magnitude_squared(V) = list.foldl(func(Vi,A) = A+Vi*Vi, V, base(0.0)).
+magnitude(V) = sqrt(magnitude_squared(V)).
+distance_squared(V1,V2) = magnitude_squared(vminus(V1,V2)).
+distance(V1,V2) = sqrt(distance_squared(V1,V2)).
 
-%% let map_n f n =
-%%   let rec loop i = if i=n then [] else (f i)::(loop (i+1)) in loop 0
+:- module ad.lists.
+:- interface.
+:- func (list(ad_number)::in) + (list(ad_number)::in) = (list(ad_number)::out) is det.
+:- func (list(ad_number)::in) - (list(ad_number)::in) = (list(ad_number)::out) is det.
+:- implementation.
+X + Y = list.map_corresponding(func(Xi,Yi) = Xi+Yi, X, Y).
+X - Y = list.map_corresponding(func(Xi,Yi) = Xi-Yi, X, Y).
+:- end_module ad.lists.
 
-%% let vplus u v = map2 ( +. ) u v
+:- func replace_ith(list(T),int,T) = list(T).
+replace_ith(In, I, Xi) = Y :-
+    In = [Xh|Xt] ->
+    (if I = 0 then Y=[Xi|Xt] else Y = [Xh|replace_ith(Xt, int.(I+1), Xi)])
+    ;
+    Y = [].
 
-%% let vminus u v = map2 ( -. ) u v
-
-%% let ktimesv k = map (fun x -> k*.x)
-
-%% let magnitude_squared x = fold_left ( +. ) (Base 0.0) (map sqr x)
-
-%% let magnitude x = sqrt (magnitude_squared x)
-
-%% let distance_squared u v = magnitude_squared (vminus v u)
-
-%% let distance u v = sqrt (distance_squared u v)
-
-%% let rec replace_ith (xh::xt) i xi =
-%%     if i<=(Base 0.0) && (Base 0.0)<=i
-%%     then xi::xt
-%%     else xh::(replace_ith xt (i-.(Base 1.0)) xi)
-
+%% :- func gradient_F(func(list(ad_number)) = ad_number, list(ad_number)) = list(ad_number).
+%% gradient_F(F,X) = map_n(func(I) = derivative_F(func(Xi) = F(replace_ith(X, base(float(I)), Xi)),
+%% 					       det_index1(X,I)),
+%% 			list.length(X)).
+    
 %% let gradient_F f x =
 %%   map_n
 %%     (fun i -> derivative_F (fun xi -> f (replace_ith x (Base (float i)) xi)) (nth x i))
