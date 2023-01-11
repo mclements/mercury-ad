@@ -9,22 +9,24 @@
 :- import_module float.
 :- import_module bool.
 :- import_module math.
-:- import_module store.
+:- import_module map.
 
 main(!IO) :- 
     example1(!IO),
     example2(!IO).
 
 :- type ad_number --->
-   dual_number(ad_number, ad_number, ad_number)
+   dual_number(ad_number, % epsilon (used for order of derivative)
+	       ad_number, % value
+	       ad_number) % derivative
    ;
-   tape(ad_number,
-	ad_number,
-	ad_number,
-	list(ad_number),
-	list(ad_number),
-	ad_number, % ref
-	ad_number) % ref
+   tape(ad_number, % variable order (new)
+	ad_number, % epsilon (used for order of derivative)
+	ad_number, % value
+	list(ad_number), % factors
+	list(ad_number), % tape
+	ad_number, % fanout 
+	ad_number) % sensitivity
    ;
    base(float).
 
@@ -215,18 +217,18 @@ reverse_phase(Sensitivity1, In) = Y :-
      Y = tape(N, E, X, Factors, Tapes, NewFanout, NewSensitivity))
     else Y = In. %% base(_) and dual_number(_,_,_)
 
-:- func extract_gradients(ad_number) = {ad_number,ad_number}.
-
-extract_gradients(In) = Y :-
-    (In = tape(N,_,_,[], [], _, Sensitivity) -> Y = {N,Sensitivity}
+:- pred extract_gradients(ad_number::in,
+			  map(ad_number,ad_number)::in,map(ad_number,ad_number)::out) is det.
+extract_gradients(In,!Map) :-
+    In = tape(N,_,_,_,[],_, Sensitivity) ->
+	(if contains(!.Map, N)
+	 then map.det_update(N,Sensitivity+lookup(!.Map,N),!Map)
+         else map.det_insert(N,Sensitivity,!Map))
     ;
-    In = tape(N2,_,_,_, Tapes, _, _) ->
-    Y = {N2,
-	 list.foldl(func(Item,Aggr) = Yi is det :-
-			({_,Sensitivity1} = extract_gradients(Item),
-			 Yi=Aggr+Sensitivity1), Tapes, base(0.0))}
+    In = tape(_,_,_,_, Tapes, _, _) ->
+    list.foldl(extract_gradients, Tapes, !Map)
     ;
-    Y={base(-1.0),In}).
+    !:Map = !.Map.
 
 :- pred gradient_R((func(list(ad_number)) = ad_number)::in, list(ad_number)::in, list(ad_number)::out,
 		   io::di, io::uo) is det.
@@ -243,63 +245,35 @@ gradient_R(F,X,Y,!IO) :-
         get_epsilon(!:Epsilon, !IO), %% Is this needed?
 	Epsilon1 = !.Epsilon,	      
 	(if Y1 = tape(_, E1, _, _, _, _, _),
-	 (if E1 < Epsilon1 then Tapes2 = [Y1]
+	 (if E1 < Epsilon1 then Tape = Y1
 	  else
 	  Y1a = determine_fanout(Y1),
-	  reverse_phase(base(1.0),Y1a) = tape(_,_,_,_,Tapes2,_,_))
+	  Tape = reverse_phase(base(1.0),Y1a))
 	then
-	Sens = list.map(extract_gradients, Tapes2),
-	Sens2 = list.sort(Sens),
-	Y = list.map(func({_,Item}) = Item, Sens2)			 
-	%% Y = Tapes2
+	extract_gradients(Tape, map.init, Map1),
+	Y = map.values(Map1)
+	%% Y = [Tape] % for debugging
 	else Y = []), %% base(_) and dual_number(_,_,_)
 	!:Epsilon = !.Epsilon - base(1.0),
 	set_epsilon(!.Epsilon, !IO)).
 
-%% let rec determine_fanout (Tape (_, _, _, tapes, fanout, _)) =
-%%     (fanout := !fanout+.(Base 1.0);
-%%      if !fanout<=(Base 1.0) && (Base 1.0)<=(!fanout)
-%%      (* for-each *)
-%%      then (map determine_fanout tapes; ())
-%%      else ())
-
-%% let rec reverse_phase sensitivity1 (Tape (_, _, factors, tapes, fanout, sensitivity)) =
-%%   (sensitivity := !sensitivity+.sensitivity1;
-%%    fanout := !fanout-.(Base 1.0);
-%%    if !fanout<=(Base 0.0) && (Base 0.0)<=(!fanout)
-%%        (* for-each *)
-%%    then ((map2
-%% 	    (fun factor tape -> reverse_phase (!sensitivity*.factor) tape)
-%% 	    factors tapes);
-%% 	 ())
-%%    else ())
-		      
-%% let gradient_R f x =
-%%     (epsilon := !epsilon+.(Base 1.0);
-%%      let x = map (fun xi -> (tape (!epsilon) xi [] [])) x in
-%%      let y = f x in
-%%      (match f x with (Dual_number _) -> ()
-%%      | Tape (e1, _, _, _, _, _) ->
-%% 	 if e1<(!epsilon)
-%% 	 then ()
-%% 	 else (determine_fanout y; reverse_phase (Base 1.0) y)
-%%      | Base _ -> ());
-%%      epsilon := !epsilon-.(Base 1.0);
-%%      map (fun (Tape (_, _, _, _, _, sensitivity)) -> !sensitivity) x)
-
 :- pred example2(io::di, io::uo) is det.
 example2(!IO) :-
     gradient_R(func(List) = Y :-
+		   (if List=[A,B] then Y=exp(base(2.0)*A)+B else Y = base(0.0)),
+		   [base(1.0),base(3.0)], Grad0, !IO),
+    print_line(Grad0, !IO),
+    print("Expected: ", !IO), print_line([math.exp(2.0)*2.0,1.0], !IO),
+    gradient_R(func(List) = Y :-
 		   (if List=[A,B] then Y=B+A*A*A else Y = base(0.0)),
 		   [base(1.1),base(2.3)], Grad, !IO),
-    print_line(Grad, !IO), %% Oops: it is order-dependent:(
-    print("Expected: ", !IO), print_line([3.0*1.1*1.1,1.0], !IO).
-
-    %% gradient_R(func(List) = Y :-
-    %% 		   (if List=[A,B,C] then Y=base(1.2)*A*A*A+base(1.5)*B*B+C*base(1.1) else Y=base(0.0)),
-    %% 		   [base(1.0),base(2.0),base(3.0)], Grad, !IO),
-    %% print_line(Grad, !IO),
-    %% print_line("Expected: [base(3.6),base(6.0),base(1.1)]", !IO).
+    print_line(Grad, !IO),
+    print("Expected: ", !IO), print_line([3.0*1.1*1.1,1.0], !IO),
+    gradient_R(func(List) = Y :-
+		   (if List=[A,B] then Y=exp(B+A*A*A) else Y = base(0.0)),
+		   [base(1.1),base(2.3)], Grad2, !IO),
+    print_line(Grad2, !IO),
+    print("Expected: ", !IO), print_line([math.exp(2.3+1.1*1.1*1.1)*(3.0*1.1*1.1),math.exp(2.3+1.1*1.1*1.1)], !IO).
 
 %% let rec write_real p =
 %%   match p with (Dual_number (_, x, _)) -> ((write_real x); p)
