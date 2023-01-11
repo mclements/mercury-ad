@@ -11,7 +11,7 @@
 	       ad_number, % value
 	       ad_number) % derivative
    ;
-   tape(ad_number, % variable order (new)
+   tape(int, % variable order (new)
 	ad_number, % epsilon (used for order of derivative)
 	ad_number, % value
 	list(ad_number), % factors
@@ -22,7 +22,7 @@
    base(float).
 
 :- func make_dual_number(ad_number,ad_number,ad_number) = ad_number.
-:- func make_tape(ad_number, ad_number, ad_number, list(ad_number),
+:- func make_tape(int, ad_number, ad_number, list(ad_number),
 			  list(ad_number)) = ad_number.
 :- func (ad_number::in) + (ad_number::in) = (ad_number::out) is det.
 :- func (ad_number::in) - (ad_number::in) = (ad_number::out) is det.
@@ -240,8 +240,8 @@ reverse_phase(Sensitivity1, In) = Y :-
     else Y = In. %% base(_) and dual_number(_,_,_)
 
 :- pred extract_gradients(ad_number::in,
-			  map(ad_number,ad_number)::in,
-			  map(ad_number,ad_number)::out) is det.
+			  map(int,ad_number)::in,
+			  map(int,ad_number)::out) is det.
 extract_gradients(In,!Map) :-
     In = tape(N,_,_,_,[],_, Sensitivity) ->
 	(if contains(!.Map, N)
@@ -259,7 +259,8 @@ gradient_R(F,X,Y,!IO) :-
 	!:Epsilon = !.Epsilon + base(1.0),
 	set_epsilon(!.Epsilon, !IO),
 	Epsilon0 = !.Epsilon,
-	Indexes = list.map(func(I) = base(float(I)), 1..length(X)),
+	%% Indexes = list.map(func(I) = base(float(I)), 1..length(X)),
+	Indexes = 1..length(X),
 	NewX = list.map_corresponding(func(Xi,J) = make_tape(J, Epsilon0, Xi, [], []), X, Indexes),
 	Y1 = F(NewX),
         get_epsilon(!:Epsilon, !IO), %% Is this needed?
