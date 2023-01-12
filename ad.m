@@ -42,6 +42,9 @@
 :- pred derivative_F((func(ad_number) = ad_number)::in, ad_number::in, ad_number::out) is det.
 :- pred gradient_F((func(list(ad_number)) = ad_number)::in,
 		   list(ad_number)::in, list(ad_number)::out) is det.
+:- pred gradient_F((func(list(ad_number)) = ad_number)::in,
+		   list(ad_number)::in, list(ad_number)::out,
+		  int::in, int::out) is det.
 :- pred gradient_R((func(list(ad_number)) = ad_number)::in,
 		   list(ad_number)::in, list(ad_number)::out,
 		   int::in, int::out) is det.
@@ -376,12 +379,14 @@ replace_ith1(In, I, Xi) = Y :-
     ;
     Y = [].
 
-%% Does this need !Epsilon?
-gradient_F(F,X,Y) :-
-    list.map(pred(I::in,Yi::out) is det :-
+gradient_F(F,X,Y) :-gradient_F(F,X,Y,0,_).
+gradient_F(F,X,Y,!Epsilon) :-
+    some [Eps] (
+	Eps = !.Epsilon,
+    list.map_foldl(pred(I::in,Yi::out, _::in, E1::out) is det :-
 		       derivative_F(func(Xi) = F(replace_ith1(X, I, Xi)),
-				    det_index1(X,I), Yi),
-		       1..list.length(X), Y).
+				    det_index1(X,I), Yi, Eps, E1),
+		       1..list.length(X), Y, !Epsilon)).
 
 gradient_ascent_F(F, X0, N, Eta, Y) :-
     gradient_F(F, X0, D0),
