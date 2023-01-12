@@ -23,7 +23,8 @@
 
 :- func make_dual_number(int,ad_number,ad_number) = ad_number.
 :- func make_tape(int, int, ad_number, list(ad_number),
-			  list(ad_number)) = ad_number.
+		  list(ad_number)) = ad_number.
+
 :- func (ad_number::in) + (ad_number::in) = (ad_number::out) is det.
 :- func (ad_number::in) - (ad_number::in) = (ad_number::out) is det.
 :- func (ad_number::in) * (ad_number::in) = (ad_number::out) is det.
@@ -35,13 +36,58 @@
 :- pred (ad_number::in) == (ad_number::in) is semidet.
 :- func exp(ad_number) = ad_number is det.
 :- func sqrt(ad_number) = ad_number is det.
+
 :- pred derivative_F((func(ad_number) = ad_number)::in, ad_number::in, ad_number::out,
 		     io::di, io::uo) is det.
-:- pred gradient_R((func(list(ad_number)) = ad_number)::in, list(ad_number)::in, list(ad_number)::out,
-		   io::di, io::uo) is det.
 :- pred gradient_F((func(list(ad_number)) = ad_number)::in,
 		   list(ad_number)::in, list(ad_number)::out,
 		   io::di, io::uo) is det.
+:- pred gradient_R((func(list(ad_number)) = ad_number)::in,
+		   list(ad_number)::in, list(ad_number)::out,
+		   io::di, io::uo) is det.
+
+:- pred gradient_ascent_F((func(list(ad_number)) = ad_number)::in,
+			   list(ad_number)::in,
+			   int::in,
+			   float::in,
+			   {list(ad_number), ad_number, list(ad_number)}::out,
+			   io::di, io::uo) is det.
+:- pred gradient_ascent_R((func(list(ad_number)) = ad_number)::in,
+			   list(ad_number)::in,
+			   int::in,
+			   float::in,
+			   {list(ad_number), ad_number, list(ad_number)}::out,
+			   io::di, io::uo) is det.
+:- pred multivariate_argmin_F((func(list(ad_number)) = ad_number)::in,
+			      list(ad_number)::in,
+			      list(ad_number)::out,
+			      io::di,
+			      io::uo) is det.
+:- pred multivariate_argmin_R((func(list(ad_number)) = ad_number)::in,
+			      list(ad_number)::in,
+			      list(ad_number)::out,
+			      io::di,
+			      io::uo) is det.
+:- pred multivariate_argmax_F((func(list(ad_number)) = ad_number)::in,
+			      list(ad_number)::in,
+			      list(ad_number)::out,
+			      io::di,
+			      io::uo) is det.
+:- pred multivariate_argmax_R((func(list(ad_number)) = ad_number)::in,
+			      list(ad_number)::in,
+			      list(ad_number)::out,
+			      io::di,
+			      io::uo) is det.
+:- pred multivariate_max_F((func(list(ad_number)) = ad_number)::in,
+			   list(ad_number)::in,
+			   ad_number::out,
+			   io::di,
+			   io::uo) is det.
+:- pred multivariate_max_R((func(list(ad_number)) = ad_number)::in,
+			   list(ad_number)::in,
+			   ad_number::out,
+			   io::di,
+			   io::uo) is det.
 
 :- implementation.
 :- import_module bool.
@@ -85,6 +131,7 @@ exp(X) = lift_real_to_real(math.exp, exp, X).
 sqrt(X) = lift_real_to_real(math.sqrt,
 			    func(B) = base(1.0)/(sqrt(B)+sqrt(B)),
 			    X).
+%% TODO: add further functions and operators
 
 :- func lift_real_to_real(func(float) = float, func(ad_number) = ad_number, ad_number) =
    ad_number.
@@ -356,12 +403,6 @@ gradient_F(F,X,Y,!IO) :-
 				    det_index1(X,I), Yi, IO0, IO1),
 		       1..list.length(X), Y, !IO).
 
-:- pred gradient_ascent_F((func(list(ad_number)) = ad_number)::in,
-			   list(ad_number)::in,
-			   int::in,
-			   float::in,
-			   {list(ad_number), ad_number, list(ad_number)}::out,
-			   io::di, io::uo) is det.
 gradient_ascent_F(F, X0, N, Eta, Y, !IO) :-
     gradient_F(F, X0, D0, !IO),
     (if N = 0
@@ -369,12 +410,6 @@ gradient_ascent_F(F, X0, N, Eta, Y, !IO) :-
      else gradient_ascent_F(F, 
 	     vplus(X0, ktimesv(base(Eta), D0)), int.(N-1), Eta, Y, !IO)).
 
-:- pred gradient_ascent_R((func(list(ad_number)) = ad_number)::in,
-			   list(ad_number)::in,
-			   int::in,
-			   float::in,
-			   {list(ad_number), ad_number, list(ad_number)}::out,
-			   io::di, io::uo) is det.
 gradient_ascent_R(F, X0, N, Eta, Y, !IO) :-
     gradient_F(F, X0, D0, !IO),
     (if N = 0
@@ -382,11 +417,6 @@ gradient_ascent_R(F, X0, N, Eta, Y, !IO) :-
      else gradient_ascent_R(F, 
 	     vplus(X0, ktimesv(base(Eta), D0)), int.(N-1), Eta, Y, !IO)).
 
-:- pred multivariate_argmin_F((func(list(ad_number)) = ad_number)::in,
-			      list(ad_number)::in,
-			      list(ad_number)::out,
-			      io::di,
-			      io::uo) is det.
 multivariate_argmin_F(F,X,Y,!IO) :-
     multivariate_argmin_F_loop(X, F, base(1e-5), base(1e-8), 0, Y, !IO).
 
@@ -413,11 +443,6 @@ multivariate_argmin_F_loop(X, F, Eta, Gtol, I, Y, !IO) :-
 			       then multivariate_argmin_F_loop(Xdash,F, Eta, Gtol, int.(I+1), Y, !IO) 
 			       else multivariate_argmin_F_loop(X,F,Eta/base(2.0), Gtol, 0, Y, !IO))))).
 
-:- pred multivariate_argmin_R((func(list(ad_number)) = ad_number)::in,
-			      list(ad_number)::in,
-			      list(ad_number)::out,
-			      io::di,
-			      io::uo) is det.
 multivariate_argmin_R(F,X,Y,!IO) :-
     multivariate_argmin_R_loop(X, F, base(1e-5), base(1e-8), 0, Y, !IO).
 
@@ -445,34 +470,13 @@ multivariate_argmin_R_loop(X, F, Eta, Gtol, I, Y, !IO) :-
 			       then multivariate_argmin_R_loop(Xdash,F, Eta, Gtol, int.(I+1), Y, !IO) 
 			       else multivariate_argmin_R_loop(X,F,Eta/base(2.0), Gtol, 0, Y, !IO))))).
 
-:- pred multivariate_argmax_F((func(list(ad_number)) = ad_number)::in,
-			      list(ad_number)::in,
-			      list(ad_number)::out,
-			      io::di,
-			      io::uo) is det.
 multivariate_argmax_F(F,X,Y,!IO) :-
     multivariate_argmin_F(func(X1) = base(0.0) - F(X1), X, Y, !IO).
-:- pred multivariate_max_F((func(list(ad_number)) = ad_number)::in,
-			   list(ad_number)::in,
-			   ad_number::out,
-			   io::di,
-			   io::uo) is det.
 multivariate_max_F(F,X, Y, !IO) :-
     multivariate_argmax_F(F,X, Theta, !IO),
     Y = F(Theta).
-
-:- pred multivariate_argmax_R((func(list(ad_number)) = ad_number)::in,
-			      list(ad_number)::in,
-			      list(ad_number)::out,
-			      io::di,
-			      io::uo) is det.
 multivariate_argmax_R(F,X,Y,!IO) :-
     multivariate_argmin_R(func(X1) = base(0.0) - F(X1), X, Y, !IO).
-:- pred multivariate_max_R((func(list(ad_number)) = ad_number)::in,
-			   list(ad_number)::in,
-			   ad_number::out,
-			   io::di,
-			   io::uo) is det.
 multivariate_max_R(F,X, Y, !IO) :-
     multivariate_argmax_R(F,X, Theta, !IO),
     Y = F(Theta).
