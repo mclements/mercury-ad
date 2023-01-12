@@ -38,56 +38,54 @@
 :- func sqrt(ad_number) = ad_number is det.
 
 :- pred derivative_F((func(ad_number) = ad_number)::in, ad_number::in, ad_number::out,
-		     io::di, io::uo) is det.
+		     int::in, int::out) is det.
+:- pred derivative_F((func(ad_number) = ad_number)::in, ad_number::in, ad_number::out) is det.
 :- pred gradient_F((func(list(ad_number)) = ad_number)::in,
-		   list(ad_number)::in, list(ad_number)::out,
-		   io::di, io::uo) is det.
+		   list(ad_number)::in, list(ad_number)::out) is det.
 :- pred gradient_R((func(list(ad_number)) = ad_number)::in,
 		   list(ad_number)::in, list(ad_number)::out,
-		   io::di, io::uo) is det.
+		   int::in, int::out) is det.
+:- pred gradient_R((func(list(ad_number)) = ad_number)::in,
+		   list(ad_number)::in, list(ad_number)::out) is det.
 
 :- pred gradient_ascent_F((func(list(ad_number)) = ad_number)::in,
 			   list(ad_number)::in,
 			   int::in,
 			   float::in,
-			   {list(ad_number), ad_number, list(ad_number)}::out,
-			   io::di, io::uo) is det.
+			   {list(ad_number), ad_number, list(ad_number)}::out) is det.
 :- pred gradient_ascent_R((func(list(ad_number)) = ad_number)::in,
 			   list(ad_number)::in,
 			   int::in,
 			   float::in,
-			   {list(ad_number), ad_number, list(ad_number)}::out,
-			   io::di, io::uo) is det.
+			   {list(ad_number), ad_number, list(ad_number)}::out) is det.
 :- pred multivariate_argmin_F((func(list(ad_number)) = ad_number)::in,
 			      list(ad_number)::in,
-			      list(ad_number)::out,
-			      io::di,
-			      io::uo) is det.
+			      list(ad_number)::out) is det.
 :- pred multivariate_argmin_R((func(list(ad_number)) = ad_number)::in,
 			      list(ad_number)::in,
-			      list(ad_number)::out,
-			      io::di,
-			      io::uo) is det.
+			      list(ad_number)::out) is det.
 :- pred multivariate_argmax_F((func(list(ad_number)) = ad_number)::in,
 			      list(ad_number)::in,
-			      list(ad_number)::out,
-			      io::di,
-			      io::uo) is det.
+			      list(ad_number)::out) is det.
 :- pred multivariate_argmax_R((func(list(ad_number)) = ad_number)::in,
 			      list(ad_number)::in,
-			      list(ad_number)::out,
-			      io::di,
-			      io::uo) is det.
+			      list(ad_number)::out) is det.
 :- pred multivariate_max_F((func(list(ad_number)) = ad_number)::in,
 			   list(ad_number)::in,
-			   ad_number::out,
-			   io::di,
-			   io::uo) is det.
+			   ad_number::out) is det.
 :- pred multivariate_max_R((func(list(ad_number)) = ad_number)::in,
 			   list(ad_number)::in,
-			   ad_number::out,
-			   io::di,
-			   io::uo) is det.
+			   ad_number::out) is det.
+
+:- func sqr(ad_number) = ad_number.
+:- func map_n(func(int) = ad_number, int) = list(ad_number).
+:- func vplus(list(ad_number), list(ad_number)) = list(ad_number).
+:- func vminus(list(ad_number), list(ad_number)) = list(ad_number).
+:- func ktimesv(ad_number, list(ad_number)) = list(ad_number).
+:- func magnitude_squared(list(ad_number)) = ad_number.
+:- func magnitude(list(ad_number)) = ad_number.
+:- func distance_squared(list(ad_number),list(ad_number)) = ad_number.
+:- func distance(list(ad_number),list(ad_number)) = ad_number.
 
 :- implementation.
 :- import_module bool.
@@ -98,7 +96,7 @@
 main(!IO) :- 
     examples(!IO).
 
-:- mutable(epsilon, int, 0, ground, [untrailed,attach_to_io_state]).
+%% :- mutable(epsilon, int, 0, ground, [untrailed,attach_to_io_state]).
 
 make_dual_number(E, X, Xprime) = Y :-
     if Xprime = base(0.0)
@@ -227,44 +225,40 @@ lift_real_cross_real_to_bool(F, P1, P2) :-
     P2 = base(X2),
     call(F,X1,X2)).
 
-derivative_F(F,X,Y,!IO) :-
-    some [!Epsilon] (
-	get_epsilon(!:Epsilon, !IO),
+derivative_F(F,X,Y) :- derivative_F(F,X,Y,0,_).
+derivative_F(F,X,Y,!Epsilon) :-
 	!:Epsilon = int.(!.Epsilon + 1),
-	set_epsilon(!.Epsilon, !IO),
 	Fprime = F(make_dual_number(!.Epsilon, X, base(1.0))),
 	(if Fprime = dual_number(E1, _, Yprime) then
-		     get_epsilon(!:Epsilon, !IO),
 		     (if int.(E1 < !.Epsilon) then Y = base(0.0) else Y=Yprime)
 		     else Y = base(0.0)),
-	!:Epsilon = int.(!.Epsilon - 1),
-	set_epsilon(!.Epsilon, !IO)).
+	!:Epsilon = int.(!.Epsilon - 1).
 
 :- pred examples(io::di, io::uo) is det.
 examples(!IO) :-
-    derivative_F(func(X) = exp(base(2.0)*X), base(1.0), GradF, !IO),
+    derivative_F(func(X) = exp(base(2.0)*X), base(1.0), GradF),
     print_line("Expected: ", !IO), print_line(base(math.exp(2.0)*2.0), !IO),
     print_line(GradF, !IO),
     gradient_R(func(List) = Y :-
 		   (if List=[A,B] then Y=exp(base(2.0)*A)+B else Y = base(0.0)),
-		   [base(1.0),base(3.0)], Grad0, !IO),
+		   [base(1.0),base(3.0)], Grad0),
     print_line("Expected: ", !IO), print_line([base(math.exp(2.0)*2.0),base(1.0)], !IO),
     print_line(Grad0, !IO),
     gradient_R(func(List) = Y :-
 		   (if List=[A,B] then Y=B+A*A*A else Y = base(0.0)),
-		   [base(1.1),base(2.3)], Grad, !IO),
+		   [base(1.1),base(2.3)], Grad),
     print_line("Expected: ", !IO), print_line([base(3.0*1.1*1.1),base(1.0)], !IO),
     print_line(Grad, !IO),
     gradient_R(func(List) = Y :-
 		   (if List=[A,B] then Y=exp(B+A*A*A) else Y = base(0.0)),
-		   [base(1.1),base(2.3)], Grad2, !IO),
+		   [base(1.1),base(2.3)], Grad2),
     print_line("Expected: ", !IO),
     print_line([base(math.exp(2.3+1.1*1.1*1.1)*(3.0*1.1*1.1)),
 		base(math.exp(2.3+1.1*1.1*1.1))], !IO),
     print_line(Grad2, !IO),
     gradient_F(func(List) = Y :-
 		   (if List=[A,B] then Y=exp(B+A*A*A) else Y = base(0.0)),
-		   [base(1.1),base(2.3)], Grad3, !IO),
+		   [base(1.1),base(2.3)], Grad3),
     print_line("Expected: ", !IO),
     print_line([base(math.exp(2.3+1.1*1.1*1.1)*(3.0*1.1*1.1)),
 		base(math.exp(2.3+1.1*1.1*1.1))], !IO),
@@ -273,7 +267,7 @@ examples(!IO) :-
 			      if AB = [A,B]
 				      then Y = A*A+(B-base(1.0))*(B-base(1.0))
 								  else Y=base(0.0),
-			  [base(1.0),base(2.0)],Y4,!IO),
+			  [base(1.0),base(2.0)],Y4),
     print_line("Expected: ", !IO),
     print_line([base(0.0),base(1.0)], !IO),
     print_line(Y4,!IO),
@@ -281,7 +275,7 @@ examples(!IO) :-
 			      if AB = [A,B]
 				      then Y = A*A+(B-base(1.0))*(B-base(1.0))
 								  else Y=base(0.0),
-			  [base(1.0),base(2.0)],Y5,!IO),
+			  [base(1.0),base(2.0)],Y5),
     print_line("Expected: ", !IO),
     print_line([base(0.0),base(1.0)], !IO),
     print_line(Y5,!IO).
@@ -327,19 +321,15 @@ extract_gradients(In,!Map) :-
     ;
     !:Map = !.Map.
 
-gradient_R(F,X,Y,!IO) :-
-    some [!Epsilon] (
-	get_epsilon(!:Epsilon, !IO),
+gradient_R(F,X,Y) :- gradient_R(F,X,Y,0,_).
+gradient_R(F,X,Y,!Epsilon) :-
 	!:Epsilon = int.(!.Epsilon + 1),
-	set_epsilon(!.Epsilon, !IO),
-	Epsilon0 = !.Epsilon,
 	Indexes = 1..length(X),
+	Epsilon0 = !.Epsilon,
 	NewX = list.map_corresponding(func(Xi,J) = make_tape(J, Epsilon0, Xi, [], []), X, Indexes),
 	Y1 = F(NewX),
-        get_epsilon(!:Epsilon, !IO), %% Is this needed?
-	Epsilon1 = !.Epsilon,	      
 	(if Y1 = tape(_, E1, _, _, _, _, _),
-	 (if int.(E1 < Epsilon1) then Tape = Y1
+	 (if int.(E1 < !.Epsilon) then Tape = Y1
 	  else
 	  Y1a = determine_fanout(Y1),
 	  Tape = reverse_phase(base(1.0),Y1a))
@@ -348,8 +338,7 @@ gradient_R(F,X,Y,!IO) :-
 	Y = map.values(Map1)
 	%% Y = [Tape] % for debugging
 	else Y = []), %% base(_) and dual_number(_,_,_)
-	!:Epsilon = int.(!.Epsilon - 1),
-	set_epsilon(!.Epsilon, !IO)).
+	!:Epsilon = int.(!.Epsilon - 1).
 
 :- func write_real(ad_number) = float.
 write_real(In) = Y :-
@@ -360,16 +349,6 @@ write_real(In) = Y :-
     In = base(X) -> Y = X
     ;
     Y = 0.0. 
-
-:- func sqr(ad_number) = ad_number.
-:- func map_n(func(int) = ad_number, int) = list(ad_number).
-:- func vplus(list(ad_number), list(ad_number)) = list(ad_number).
-:- func vminus(list(ad_number), list(ad_number)) = list(ad_number).
-:- func ktimesv(ad_number, list(ad_number)) = list(ad_number).
-:- func magnitude_squared(list(ad_number)) = ad_number.
-:- func magnitude(list(ad_number)) = ad_number.
-:- func distance_squared(list(ad_number),list(ad_number)) = ad_number.
-:- func distance(list(ad_number),list(ad_number)) = ad_number.
 
 sqr(X) = X*X.
 map_n(F,N) = list.map(func(I) = F(I), 1..N).
@@ -397,54 +376,53 @@ replace_ith1(In, I, Xi) = Y :-
     ;
     Y = [].
 
-gradient_F(F,X,Y,!IO) :-
-    list.map_foldl(pred(I::in,Yi::out,IO0::di,IO1::uo) is det :-
+%% Does this need !Epsilon?
+gradient_F(F,X,Y) :-
+    list.map(pred(I::in,Yi::out) is det :-
 		       derivative_F(func(Xi) = F(replace_ith1(X, I, Xi)),
-				    det_index1(X,I), Yi, IO0, IO1),
-		       1..list.length(X), Y, !IO).
+				    det_index1(X,I), Yi),
+		       1..list.length(X), Y).
 
-gradient_ascent_F(F, X0, N, Eta, Y, !IO) :-
-    gradient_F(F, X0, D0, !IO),
+gradient_ascent_F(F, X0, N, Eta, Y) :-
+    gradient_F(F, X0, D0),
     (if N = 0
 	    then Y = {X0, F(X0), D0}
      else gradient_ascent_F(F, 
-	     vplus(X0, ktimesv(base(Eta), D0)), int.(N-1), Eta, Y, !IO)).
+	     vplus(X0, ktimesv(base(Eta), D0)), int.(N-1), Eta, Y)).
 
-gradient_ascent_R(F, X0, N, Eta, Y, !IO) :-
-    gradient_F(F, X0, D0, !IO),
+gradient_ascent_R(F, X0, N, Eta, Y) :-
+    gradient_F(F, X0, D0),
     (if N = 0
 	    then Y = {X0, F(X0), D0}
      else gradient_ascent_R(F, 
-	     vplus(X0, ktimesv(base(Eta), D0)), int.(N-1), Eta, Y, !IO)).
+	     vplus(X0, ktimesv(base(Eta), D0)), int.(N-1), Eta, Y)).
 
-multivariate_argmin_F(F,X,Y,!IO) :-
-    multivariate_argmin_F_loop(X, F, base(1e-5), base(1e-8), 0, Y, !IO).
+multivariate_argmin_F(F,X,Y) :-
+    multivariate_argmin_F_loop(X, F, base(1e-5), base(1e-8), 0, Y).
 
 :- pred multivariate_argmin_F_loop(list(ad_number)::in,
 				   (func(list(ad_number)) = ad_number)::in,
 				   ad_number::in,
 				   ad_number::in,
 				   int::in,
-				   list(ad_number)::out,
-				   io::di,
-				   io::uo) is det.
-multivariate_argmin_F_loop(X, F, Eta, Gtol, I, Y, !IO) :-
+				   list(ad_number)::out) is det.
+multivariate_argmin_F_loop(X, F, Eta, Gtol, I, Y) :-
     FX = F(X),
-    gradient_F(F,X,GX,!IO),
+    gradient_F(F,X,GX),
     (if magnitude(GX) =< Gtol
      then Y=X
      else (if I=10
-		then multivariate_argmin_F_loop(X,F,base(2.0)*Eta, Gtol, 0, Y, !IO)
+		then multivariate_argmin_F_loop(X,F,base(2.0)*Eta, Gtol, 0, Y)
 		else Xdash = vminus(X, ktimesv(Eta, GX)),
 		    (if distance(X,Xdash) =< Gtol
 		       then Y=X
 		       else FXdash = F(Xdash),
 			    (if FXdash<FX
-			       then multivariate_argmin_F_loop(Xdash,F, Eta, Gtol, int.(I+1), Y, !IO) 
-			       else multivariate_argmin_F_loop(X,F,Eta/base(2.0), Gtol, 0, Y, !IO))))).
+			       then multivariate_argmin_F_loop(Xdash,F, Eta, Gtol, int.(I+1), Y) 
+			       else multivariate_argmin_F_loop(X,F,Eta/base(2.0), Gtol, 0, Y))))).
 
-multivariate_argmin_R(F,X,Y,!IO) :-
-    multivariate_argmin_R_loop(X, F, base(1e-5), base(1e-8), 0, Y, !IO).
+multivariate_argmin_R(F,X,Y) :-
+    multivariate_argmin_R_loop(X, F, base(1e-5), base(1e-8), 0, Y).
 
 :- pred multivariate_argmin_R_loop(list(ad_number)::in,
 				   (func(list(ad_number)) = ad_number)::in,
@@ -452,31 +430,29 @@ multivariate_argmin_R(F,X,Y,!IO) :-
 				   ad_number::in,
 				   ad_number::in,
 				   int::in,
-				   list(ad_number)::out,
-				   io::di,
-				   io::uo) is det.
-multivariate_argmin_R_loop(X, F, Eta, Gtol, I, Y, !IO) :-
+				   list(ad_number)::out) is det.
+multivariate_argmin_R_loop(X, F, Eta, Gtol, I, Y) :-
     FX = F(X),
-    gradient_R(F,X,GX,!IO),
+    gradient_R(F,X,GX),
     (if magnitude(GX) =< Gtol
      then Y=X
      else (if I=10
-		then multivariate_argmin_R_loop(X,F,base(2.0)*Eta, Gtol, 0, Y, !IO)
+		then multivariate_argmin_R_loop(X,F,base(2.0)*Eta, Gtol, 0, Y)
 		else Xdash = vminus(X, ktimesv(Eta, GX)),
 		    (if distance(X,Xdash)=< Gtol
 		       then Y=X
 		       else FXdash = F(Xdash),
 			    (if FXdash<FX
-			       then multivariate_argmin_R_loop(Xdash,F, Eta, Gtol, int.(I+1), Y, !IO) 
-			       else multivariate_argmin_R_loop(X,F,Eta/base(2.0), Gtol, 0, Y, !IO))))).
+			       then multivariate_argmin_R_loop(Xdash,F, Eta, Gtol, int.(I+1), Y) 
+			       else multivariate_argmin_R_loop(X,F,Eta/base(2.0), Gtol, 0, Y))))).
 
-multivariate_argmax_F(F,X,Y,!IO) :-
-    multivariate_argmin_F(func(X1) = base(0.0) - F(X1), X, Y, !IO).
-multivariate_max_F(F,X, Y, !IO) :-
-    multivariate_argmax_F(F,X, Theta, !IO),
+multivariate_argmax_F(F,X,Y) :-
+    multivariate_argmin_F(func(X1) = base(0.0) - F(X1), X, Y).
+multivariate_max_F(F,X, Y) :-
+    multivariate_argmax_F(F,X, Theta),
     Y = F(Theta).
-multivariate_argmax_R(F,X,Y,!IO) :-
-    multivariate_argmin_R(func(X1) = base(0.0) - F(X1), X, Y, !IO).
-multivariate_max_R(F,X, Y, !IO) :-
-    multivariate_argmax_R(F,X, Theta, !IO),
+multivariate_argmax_R(F,X,Y) :-
+    multivariate_argmin_R(func(X1) = base(0.0) - F(X1), X, Y).
+multivariate_max_R(F,X, Y) :-
+    multivariate_argmax_R(F,X, Theta),
     Y = F(Theta).
