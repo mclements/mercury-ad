@@ -221,7 +221,24 @@ examples(!IO) :-
     print_line("Expected: ", !IO),
     print_line([base(math.exp(2.3+1.1*1.1*1.1)*(3.0*1.1*1.1)),
 		base(math.exp(2.3+1.1*1.1*1.1))], !IO),
-   print_line(Grad3, !IO).
+    print_line(Grad3, !IO),
+    multivariate_argmin_F(func(AB) = Y :-
+			      if AB = [A,B]
+				      then Y = A*A+(B-base(1.0))*(B-base(1.0))
+								  else Y=base(0.0),
+			  [base(1.0),base(2.0)],Y4,!IO),
+    print_line("Expected: ", !IO),
+    print_line([base(0.0),base(1.0)], !IO),
+    print_line(Y4,!IO),
+    multivariate_argmin_R(func(AB) = Y :-
+			      if AB = [A,B]
+				      then Y = A*A+(B-base(1.0))*(B-base(1.0))
+								  else Y=base(0.0),
+			  [base(1.0),base(2.0)],Y5,!IO),
+    print_line("Expected: ", !IO),
+    print_line([base(0.0),base(1.0)], !IO),
+    print_line(Y5,!IO).
+			  
  
 :- func determine_fanout(ad_number) = ad_number.
 determine_fanout(In) = Y :-
@@ -371,29 +388,30 @@ gradient_ascent_R(F, X0, N, Eta, Y, !IO) :-
 			      io::di,
 			      io::uo) is det.
 multivariate_argmin_F(F,X,Y,!IO) :-
-    multivariate_argmin_F_loop(X, F, base(1e-5), 0, Y, !IO).
+    multivariate_argmin_F_loop(X, F, base(1e-5), base(1e-8), 0, Y, !IO).
 
 :- pred multivariate_argmin_F_loop(list(ad_number)::in,
 				   (func(list(ad_number)) = ad_number)::in,
+				   ad_number::in,
 				   ad_number::in,
 				   int::in,
 				   list(ad_number)::out,
 				   io::di,
 				   io::uo) is det.
-multivariate_argmin_F_loop(X, F, Eta, I, Y, !IO) :-
+multivariate_argmin_F_loop(X, F, Eta, Gtol, I, Y, !IO) :-
     FX = F(X),
     gradient_F(F,X,GX,!IO),
-    (if magnitude(GX) =< base(1e-5)
+    (if magnitude(GX) =< Gtol
      then Y=X
      else (if I=10
-		then multivariate_argmin_F_loop(X,F,base(2.0)*Eta, 0, Y, !IO)
+		then multivariate_argmin_F_loop(X,F,base(2.0)*Eta, Gtol, 0, Y, !IO)
 		else Xdash = vminus(X, ktimesv(Eta, GX)),
-		    (if distance(X,Xdash)=< base(1e-5)
+		    (if distance(X,Xdash) =< Gtol
 		       then Y=X
 		       else FXdash = F(Xdash),
 			    (if FXdash<FX
-			       then multivariate_argmin_F_loop(Xdash,F, Eta,  int.(I+1), Y, !IO) 
-			       else multivariate_argmin_F_loop(X,F,Eta/base(2.0), 0, Y, !IO))))).
+			       then multivariate_argmin_F_loop(Xdash,F, Eta, Gtol, int.(I+1), Y, !IO) 
+			       else multivariate_argmin_F_loop(X,F,Eta/base(2.0), Gtol, 0, Y, !IO))))).
 
 :- pred multivariate_argmin_R((func(list(ad_number)) = ad_number)::in,
 			      list(ad_number)::in,
@@ -401,30 +419,31 @@ multivariate_argmin_F_loop(X, F, Eta, I, Y, !IO) :-
 			      io::di,
 			      io::uo) is det.
 multivariate_argmin_R(F,X,Y,!IO) :-
-    multivariate_argmin_R_loop(X, F, base(1e-5), 0, Y, !IO).
+    multivariate_argmin_R_loop(X, F, base(1e-5), base(1e-8), 0, Y, !IO).
 
 :- pred multivariate_argmin_R_loop(list(ad_number)::in,
 				   (func(list(ad_number)) = ad_number)::in,
 				   %% pred(list(ad_number), list(ad_number),IO0,IO1)::in(pred(in,in,out,di,uo) is det),
 				   ad_number::in,
+				   ad_number::in,
 				   int::in,
 				   list(ad_number)::out,
 				   io::di,
 				   io::uo) is det.
-multivariate_argmin_R_loop(X, F, Eta, I, Y, !IO) :-
+multivariate_argmin_R_loop(X, F, Eta, Gtol, I, Y, !IO) :-
     FX = F(X),
     gradient_R(F,X,GX,!IO),
-    (if magnitude(GX) =< base(1e-5)
+    (if magnitude(GX) =< Gtol
      then Y=X
      else (if I=10
-		then multivariate_argmin_R_loop(X,F,base(2.0)*Eta, 0, Y, !IO)
+		then multivariate_argmin_R_loop(X,F,base(2.0)*Eta, Gtol, 0, Y, !IO)
 		else Xdash = vminus(X, ktimesv(Eta, GX)),
-		    (if distance(X,Xdash)=< base(1e-5)
+		    (if distance(X,Xdash)=< Gtol
 		       then Y=X
 		       else FXdash = F(Xdash),
 			    (if FXdash<FX
-			       then multivariate_argmin_R_loop(Xdash,F, Eta,  int.(I+1), Y, !IO) 
-			       else multivariate_argmin_R_loop(X,F,Eta/base(2.0), 0, Y, !IO))))).
+			       then multivariate_argmin_R_loop(Xdash,F, Eta, Gtol, int.(I+1), Y, !IO) 
+			       else multivariate_argmin_R_loop(X,F,Eta/base(2.0), Gtol, 0, Y, !IO))))).
 
 :- pred multivariate_argmax_F((func(list(ad_number)) = ad_number)::in,
 			      list(ad_number)::in,
