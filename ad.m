@@ -21,9 +21,12 @@
    ;
    base(float).
 
+:- type v_ad_number == list(ad_number).
+:- type m_ad_number == list(list(ad_number)).
+
 :- func make_dual_number(int,ad_number,ad_number) = ad_number.
-:- func make_tape(int, int, ad_number, list(ad_number),
-		  list(ad_number)) = ad_number.
+:- func make_tape(int, int, ad_number, v_ad_number,
+		  v_ad_number) = ad_number.
 
 :- func (ad_number::in) + (ad_number::in) = (ad_number::out) is det.
 :- func (ad_number::in) - (ad_number::in) = (ad_number::out) is det.
@@ -36,59 +39,60 @@
 :- pred (ad_number::in) == (ad_number::in) is semidet.
 :- func exp(ad_number) = ad_number is det.
 :- func sqrt(ad_number) = ad_number is det.
+%% TODO: add further functions and operators
 
 :- pred derivative_F((func(ad_number) = ad_number)::in, ad_number::in, ad_number::out,
 		     int::in, int::out) is det.
 :- pred derivative_F((func(ad_number) = ad_number)::in, ad_number::in, ad_number::out) is det.
-:- pred gradient_F((func(list(ad_number)) = ad_number)::in,
-		   list(ad_number)::in, list(ad_number)::out) is det.
-:- pred gradient_F((func(list(ad_number)) = ad_number)::in,
-		   list(ad_number)::in, list(ad_number)::out,
+:- pred gradient_F((func(v_ad_number) = ad_number)::in,
+		   v_ad_number::in, v_ad_number::out) is det.
+:- pred gradient_F((func(v_ad_number) = ad_number)::in,
+		   v_ad_number::in, v_ad_number::out,
 		  int::in, int::out) is det.
-:- pred gradient_R((func(list(ad_number)) = ad_number)::in,
-		   list(ad_number)::in, list(ad_number)::out,
+:- pred gradient_R((func(v_ad_number) = ad_number)::in,
+		   v_ad_number::in, v_ad_number::out,
 		   int::in, int::out) is det.
-:- pred gradient_R((func(list(ad_number)) = ad_number)::in,
-		   list(ad_number)::in, list(ad_number)::out) is det.
+:- pred gradient_R((func(v_ad_number) = ad_number)::in,
+		   v_ad_number::in, v_ad_number::out) is det.
 
-:- pred gradient_ascent_F((func(list(ad_number)) = ad_number)::in,
-			   list(ad_number)::in,
+:- pred gradient_ascent_F((func(v_ad_number) = ad_number)::in,
+			   v_ad_number::in,
 			   int::in,
 			   float::in,
-			   {list(ad_number), ad_number, list(ad_number)}::out) is det.
-:- pred gradient_ascent_R((func(list(ad_number)) = ad_number)::in,
-			   list(ad_number)::in,
+			   {v_ad_number, ad_number, v_ad_number}::out) is det.
+:- pred gradient_ascent_R((func(v_ad_number) = ad_number)::in,
+			   v_ad_number::in,
 			   int::in,
 			   float::in,
-			   {list(ad_number), ad_number, list(ad_number)}::out) is det.
-:- pred multivariate_argmin_F((func(list(ad_number)) = ad_number)::in,
-			      list(ad_number)::in,
-			      list(ad_number)::out) is det.
-:- pred multivariate_argmin_R((func(list(ad_number)) = ad_number)::in,
-			      list(ad_number)::in,
-			      list(ad_number)::out) is det.
-:- pred multivariate_argmax_F((func(list(ad_number)) = ad_number)::in,
-			      list(ad_number)::in,
-			      list(ad_number)::out) is det.
-:- pred multivariate_argmax_R((func(list(ad_number)) = ad_number)::in,
-			      list(ad_number)::in,
-			      list(ad_number)::out) is det.
-:- pred multivariate_max_F((func(list(ad_number)) = ad_number)::in,
-			   list(ad_number)::in,
+			   {v_ad_number, ad_number, v_ad_number}::out) is det.
+:- pred multivariate_argmin_F((func(v_ad_number) = ad_number)::in,
+			      v_ad_number::in,
+			      v_ad_number::out) is det.
+:- pred multivariate_argmin_R((func(v_ad_number) = ad_number)::in,
+			      v_ad_number::in,
+			      v_ad_number::out) is det.
+:- pred multivariate_argmax_F((func(v_ad_number) = ad_number)::in,
+			      v_ad_number::in,
+			      v_ad_number::out) is det.
+:- pred multivariate_argmax_R((func(v_ad_number) = ad_number)::in,
+			      v_ad_number::in,
+			      v_ad_number::out) is det.
+:- pred multivariate_max_F((func(v_ad_number) = ad_number)::in,
+			   v_ad_number::in,
 			   ad_number::out) is det.
-:- pred multivariate_max_R((func(list(ad_number)) = ad_number)::in,
-			   list(ad_number)::in,
+:- pred multivariate_max_R((func(v_ad_number) = ad_number)::in,
+			   v_ad_number::in,
 			   ad_number::out) is det.
 
 :- func sqr(ad_number) = ad_number.
-:- func map_n(func(int) = ad_number, int) = list(ad_number).
-:- func vplus(list(ad_number), list(ad_number)) = list(ad_number).
-:- func vminus(list(ad_number), list(ad_number)) = list(ad_number).
-:- func ktimesv(ad_number, list(ad_number)) = list(ad_number).
-:- func magnitude_squared(list(ad_number)) = ad_number.
-:- func magnitude(list(ad_number)) = ad_number.
-:- func distance_squared(list(ad_number),list(ad_number)) = ad_number.
-:- func distance(list(ad_number),list(ad_number)) = ad_number.
+:- func map_n(func(int) = ad_number, int) = v_ad_number.
+:- func vplus(v_ad_number, v_ad_number) = v_ad_number.
+:- func vminus(v_ad_number, v_ad_number) = v_ad_number.
+:- func ktimesv(ad_number, v_ad_number) = v_ad_number.
+:- func magnitude_squared(v_ad_number) = ad_number.
+:- func magnitude(v_ad_number) = ad_number.
+:- func distance_squared(v_ad_number,v_ad_number) = ad_number.
+:- func distance(v_ad_number,v_ad_number) = ad_number.
 
 :- implementation.
 :- import_module bool.
@@ -282,7 +286,6 @@ examples(!IO) :-
     print_line("Expected: ", !IO),
     print_line([base(0.0),base(1.0)], !IO),
     print_line(Y5,!IO).
-			  
  
 :- func determine_fanout(ad_number) = ad_number.
 determine_fanout(In) = Y :-
@@ -365,8 +368,8 @@ distance(V1,V2) = sqrt(distance_squared(V1,V2)).
 
 :- module ad.lists.
 :- interface.
-:- func (list(ad_number)::in) + (list(ad_number)::in) = (list(ad_number)::out) is det.
-:- func (list(ad_number)::in) - (list(ad_number)::in) = (list(ad_number)::out) is det.
+:- func (v_ad_number::in) + (v_ad_number::in) = (v_ad_number::out) is det.
+:- func (v_ad_number::in) - (v_ad_number::in) = (v_ad_number::out) is det.
 :- implementation.
 X + Y = list.map_corresponding(func(Xi,Yi) = Xi+Yi, X, Y).
 X - Y = list.map_corresponding(func(Xi,Yi) = Xi-Yi, X, Y).
@@ -405,12 +408,12 @@ gradient_ascent_R(F, X0, N, Eta, Y) :-
 multivariate_argmin_F(F,X,Y) :-
     multivariate_argmin_F_loop(X, F, base(1e-5), base(1e-8), 0, Y).
 
-:- pred multivariate_argmin_F_loop(list(ad_number)::in,
-				   (func(list(ad_number)) = ad_number)::in,
+:- pred multivariate_argmin_F_loop(v_ad_number::in,
+				   (func(v_ad_number) = ad_number)::in,
 				   ad_number::in,
 				   ad_number::in,
 				   int::in,
-				   list(ad_number)::out) is det.
+				   v_ad_number::out) is det.
 multivariate_argmin_F_loop(X, F, Eta, Gtol, I, Y) :-
     FX = F(X),
     gradient_F(F,X,GX),
@@ -429,13 +432,12 @@ multivariate_argmin_F_loop(X, F, Eta, Gtol, I, Y) :-
 multivariate_argmin_R(F,X,Y) :-
     multivariate_argmin_R_loop(X, F, base(1e-5), base(1e-8), 0, Y).
 
-:- pred multivariate_argmin_R_loop(list(ad_number)::in,
-				   (func(list(ad_number)) = ad_number)::in,
-				   %% pred(list(ad_number), list(ad_number),IO0,IO1)::in(pred(in,in,out,di,uo) is det),
+:- pred multivariate_argmin_R_loop(v_ad_number::in,
+				   (func(v_ad_number) = ad_number)::in,
 				   ad_number::in,
 				   ad_number::in,
 				   int::in,
-				   list(ad_number)::out) is det.
+				   v_ad_number::out) is det.
 multivariate_argmin_R_loop(X, F, Eta, Gtol, I, Y) :-
     FX = F(X),
     gradient_R(F,X,GX),
