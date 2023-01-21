@@ -1,0 +1,58 @@
+:- module test_ad.
+
+:- interface.
+:- import_module io.
+:- pred main(io::di, io::uo) is det.
+
+:- implementation.
+:- use_module math.
+:- import_module ad.
+:- import_module ad.v.
+:- import_module list.
+:- import_module float.
+
+main(!IO) :-
+    derivative_F(func(X) = exp(base(2.0)*X), base(1.0), GradF),
+    print_line("Expected: ", !IO), print_line(base(math.exp(2.0)*2.0), !IO),
+    print_line(GradF, !IO),
+    gradient_R(func(List) = Y :-
+		   (if List=[A,B] then Y=exp(base(2.0)*A)+B else Y = base(0.0)),
+		   from_list([1.0,3.0]), Grad0),
+    print_line("Expected: ", !IO), print_line([base(math.exp(2.0)*2.0),base(1.0)], !IO),
+    print_line(Grad0, !IO),
+    gradient_R(func(List) = Y :-
+		   (if List=[A,B] then Y=B+A*A*A else Y = base(0.0)),
+		   [base(1.1),base(2.3)], Grad),
+    print_line("Expected: ", !IO), print_line([base(3.0*1.1*1.1),base(1.0)], !IO),
+    print_line(Grad, !IO),
+    gradient_R(func(List) = Y :-
+		   (if List=[A,B] then Y=exp(B+A*A*A) else Y = base(0.0)),
+		   [base(1.1),base(2.3)], Grad2),
+    print_line("Expected: ", !IO),
+    print_line([base(math.exp(2.3+1.1*1.1*1.1)*(3.0*1.1*1.1)),
+		base(math.exp(2.3+1.1*1.1*1.1))], !IO),
+    print_line(Grad2, !IO),
+    gradient_F(func(List) = Y :-
+		   (if List=[A,B] then Y=exp(B+A*A*A) else Y = base(0.0)),
+		   [base(1.1),base(2.3)], Grad3),
+    print_line("Expected: ", !IO),
+    print_line([base(math.exp(2.3+1.1*1.1*1.1)*(3.0*1.1*1.1)),
+		base(math.exp(2.3+1.1*1.1*1.1))], !IO),
+    print_line(Grad3, !IO),
+    multivariate_argmin_F(func(AB) = Y :-
+			      if AB = [A,B]
+				      then Y = A*A+(B-base(1.0))*(B-base(1.0))
+								  else Y=base(0.0),
+			  [base(1.0),base(2.0)],Y4),
+    print_line("Expected: ", !IO),
+    print_line([base(0.0),base(1.0)], !IO),
+    print_line(Y4,!IO),
+    multivariate_argmin_R(func(AB) = Y :-
+			      if AB = [A,B]
+				      then Y = A*A+(B-base(1.0))*(B-base(1.0))
+								  else Y=base(0.0),
+			  [base(1.0),base(2.0)],Y5),
+    print_line("Expected: ", !IO),
+    print_line([base(0.0),base(1.0)], !IO),
+    print_line(Y5,!IO).
+
