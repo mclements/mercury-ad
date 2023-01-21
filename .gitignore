@@ -5,3 +5,6 @@ Mercury/
 msc
 test_ad
 ad
+mlp_R
+*.a
+*.so
