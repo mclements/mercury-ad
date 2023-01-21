@@ -2,6 +2,10 @@
 
 :- interface.
 
+:- import_module io.
+:- import_module list.
+:- import_module int.
+
 :- func mapi(func(T1,int)=T2, list(T1)) = list(T2).
 :- func mapi2d(func(T1,int,int)=T2, list(list(T1))) = list(list(T2)).
 :- func mapi3d(func(T1,int,int,int)=T2, list(list(list(T1)))) = list(list(list(T2))).
@@ -18,7 +22,6 @@
 
 :- func condense3(list(list(list(T)))) = list(T).
 :- func chunk3(list(T), int,int) = list(list(list(T))).
-
 
 :- func map2(func(T1,T2) = T3, list(T1), list(T2)) = list(T3).
 
@@ -73,3 +76,17 @@ condense3(Lists) = Y :-
 
 map2(F,List1,List2) = list.map_corresponding(F,List1,List2).
 
+:- pred test(io::di, io::uo) is det.
+test(!IO) :-
+    Y=mapi3d(func(X,I,J,K) = {I,J,K,int.(X+I+J+K)}, [[[1,2,3],[4,5,6]]]),
+    print_line(Y,!IO),
+    Y2 = dim2([[],[2]]),
+    print_line(Y2,!IO),
+    Y3=map3d(func(X) = int.(X+1), [[[1,2,3],[4,5,6]]]),
+    print_line(Y3,!IO),
+    Y4 = [[[1,1],[2,2],[3,3]],[[11,10],[12,20],[13,30]]],
+    {_,R,C} = dim3(Y4),
+    Y5=condense3(Y4),
+    print_line(Y5,!IO),
+    Y6=chunk3(Y5,R,C),
+    print_line(Y6,!IO).
