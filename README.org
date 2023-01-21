@@ -1,0 +1,9 @@
+#+title: mercury-ad: Mercury library for automatic differentiation
+#+author: Mark Clements
+
+* Introduction
+
+A simple Mercury library for automatic differentiation that includes forward and backward differentiation. At present, the library is a proof of concept and needs to be extended to include many other functions. 
+
+This adapts the approach presented in https://github.com/qobi/AD-Rosetta-Stone/. Interestingly, most of the functional approaches for backward differentiation described in https://github.com/qobi/AD-Rosetta-Stone/ uses references to update a tape in-place, whereas this library implements a more pure functional approach for the fanout and reverse phases. [For the technical details, I added an integer tag to each tape and then collected the sensitivity values using a map for extracting the gradients.]
+
