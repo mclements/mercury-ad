@@ -55,13 +55,29 @@
 :- func (ad_number::in) - (ad_number::in) = (ad_number::out) is det.
 :- func (ad_number::in) * (ad_number::in) = (ad_number::out) is det.
 :- func (ad_number::in) / (ad_number::in) = (ad_number::out) is det.
+:- func pow(ad_number, ad_number) = ad_number.
 :- pred (ad_number::in) < (ad_number::in) is semidet.
 :- pred (ad_number::in) =< (ad_number::in) is semidet.
 :- pred (ad_number::in) > (ad_number::in) is semidet.
 :- pred (ad_number::in) >= (ad_number::in) is semidet.
 :- pred (ad_number::in) == (ad_number::in) is semidet. % equality
 :- func exp(ad_number) = ad_number is det.
+:- func ln(ad_number) = ad_number is det.
+:- func log2(ad_number) = ad_number is det.
+:- func log10(ad_number) = ad_number is det.
+:- func log(ad_number,ad_number) = ad_number is det.
 :- func sqrt(ad_number) = ad_number is det.
+:- func sin(ad_number) = ad_number is det.
+:- func cos(ad_number) = ad_number is det.
+:- func tan(ad_number) = ad_number is det.
+:- func asin(ad_number) = ad_number is det.
+:- func acos(ad_number) = ad_number is det.
+:- func atan(ad_number) = ad_number is det.
+:- func atan2(ad_number,ad_number) = ad_number is det.
+:- func sinh(ad_number) = ad_number is det.
+:- func cosh(ad_number) = ad_number is det.
+:- func tanh(ad_number) = ad_number is det.
+:- func abs(ad_number) = ad_number is det.
 %% TODO: add further functions and operators
 
     %% derivative_F(F,Theta,Derivative,!Epsilon) takes a function F and initial values Theta,
@@ -245,6 +261,15 @@ X * Y = lift_real_cross_real_to_real(func(A,B) = A*B,
 X / Y = lift_real_cross_real_to_real(func(A,B) = A/B,
 				     func(_,B) = base(1.0)/B,
 				     func(A,B) = base(0.0)-A/(B*B), X, Y).
+pow(X,Y) = lift_real_cross_real_to_real(func(A,B) = pow(A,B),
+					func(A,B) = B*pow(A,B-base(1.0)),
+					func(A,B) = ln(A)*pow(A,B), X, Y).
+atan2(Y,X) = lift_real_cross_real_to_real(math.atan2,
+					  func(B,A) = A/(A*A+B*B),
+					  func(B,A) = base(0.0)-A/(A*A+B*B), Y, X).
+log(X,Base) = lift_real_cross_real_to_real(math.log,
+				           func(A,B) = base(1.0)/(A*ln(B)),
+					   func(A,B) = base(0.0)-ln(A)/(B*ln(B)*ln(B)), X, Base).
 
 X < Y :- lift_real_cross_real_to_bool(pred(A::in,B::in) is semidet :- A < B, X, Y).
 X =< Y :- lift_real_cross_real_to_bool(pred(A::in,B::in) is semidet :- A =< B, X, Y).
@@ -253,9 +278,23 @@ X > Y :- lift_real_cross_real_to_bool(pred(A::in,B::in) is semidet :- A > B, X, 
 X >= Y :- lift_real_cross_real_to_bool(pred(A::in,B::in) is semidet :- A >= B, X, Y).
 
 exp(X) = lift_real_to_real(math.exp, exp, X).
+ln(X) = lift_real_to_real(math.ln, func(A) = base(1.0)/A, X).
+log2(X) = lift_real_to_real(math.log2, func(A) = base(1.0)/A/base(math.ln(2.0)), X).
+log10(X) = lift_real_to_real(math.log10, func(A) = base(1.0)/A/base(math.ln(10.0)), X).
 sqrt(X) = lift_real_to_real(math.sqrt,
 			    func(B) = base(1.0)/(sqrt(B)+sqrt(B)),
 			    X).
+sin(X) = lift_real_to_real(math.sin, cos, X).
+cos(X) = lift_real_to_real(math.cos, func(A) = base(0.0)-sin(A), X).
+tan(X) = lift_real_to_real(math.tan, func(A) = base(1.0)+tan(A)*tan(A), X).
+asin(X) = lift_real_to_real(math.asin, func(A) = base(1.0)/sqrt(base(1.0)-A*A), X).
+acos(X) = lift_real_to_real(math.acos, func(A) = base(0.0) - base(1.0)/sqrt(base(1.0)-A*A), X).
+atan(X) = lift_real_to_real(math.atan, func(A) = base(1.0)/(base(1.0)+A*A), X).
+abs(X) = lift_real_to_real(float.abs,
+			   func(A) = B :- if A>=base(0.0) then B=base(1.0) else B=base(-1.0), X).
+sinh(X) = lift_real_to_real(math.sinh, cosh, X).
+cosh(X) = lift_real_to_real(math.cosh, sinh, X).
+tanh(X) = lift_real_to_real(math.tanh, func(A) = base(1.0)-tanh(A)*tanh(A), X).
 %% TODO: add further functions and operators
 
 :- func lift_real_to_real(func(float) = float, func(ad_number) = ad_number, ad_number) =
