@@ -84,7 +84,12 @@ main(!IO) :-
 			  [base(-3.0),base(4.0)],Y6),
     print_line("Expected: ", !IO),
     print_line([base(1.0),base(1.0)], !IO),
-    print_line(Y6,!IO).
+    print_line(Y6,!IO),
+    multivariate_argmin_F(rosenbrock,
+			  [base(-3.0),base(4.0)],Y7),
+    print_line("Expected: ", !IO),
+    print_line([base(1.0),base(1.0)], !IO),
+    print_line(Y7,!IO).
 
 :- func rosenbrock(v_ad_number) = ad_number.
 rosenbrock(In) = Result :-
@@ -128,12 +133,15 @@ Expected:
 Expected: 
 [base(1.0), base(1.0)]
 [base(0.9999914554400818), base(0.9999828755368568)]
+Expected: 
+[base(1.0), base(1.0)]
+[base(0.9999914554355536), base(0.9999828755391909)]
 #+end_example
 
 ** Documentation
 
 #+begin_src sh :exports results :results output :eval yes
-head -n 220 ad.m | tail -n 217
+head -n 236 ad.m | tail -n 233
 #+end_src
 
 #+RESULTS:
@@ -192,13 +200,29 @@ head -n 220 ad.m | tail -n 217
 :- func (ad_number::in) - (ad_number::in) = (ad_number::out) is det.
 :- func (ad_number::in) * (ad_number::in) = (ad_number::out) is det.
 :- func (ad_number::in) / (ad_number::in) = (ad_number::out) is det.
+:- func pow(ad_number, ad_number) = ad_number.
 :- pred (ad_number::in) < (ad_number::in) is semidet.
 :- pred (ad_number::in) =< (ad_number::in) is semidet.
 :- pred (ad_number::in) > (ad_number::in) is semidet.
 :- pred (ad_number::in) >= (ad_number::in) is semidet.
 :- pred (ad_number::in) == (ad_number::in) is semidet. % equality
 :- func exp(ad_number) = ad_number is det.
+:- func ln(ad_number) = ad_number is det.
+:- func log2(ad_number) = ad_number is det.
+:- func log10(ad_number) = ad_number is det.
+:- func log(ad_number,ad_number) = ad_number is det.
 :- func sqrt(ad_number) = ad_number is det.
+:- func sin(ad_number) = ad_number is det.
+:- func cos(ad_number) = ad_number is det.
+:- func tan(ad_number) = ad_number is det.
+:- func asin(ad_number) = ad_number is det.
+:- func acos(ad_number) = ad_number is det.
+:- func atan(ad_number) = ad_number is det.
+:- func atan2(ad_number,ad_number) = ad_number is det.
+:- func sinh(ad_number) = ad_number is det.
+:- func cosh(ad_number) = ad_number is det.
+:- func tanh(ad_number) = ad_number is det.
+:- func abs(ad_number) = ad_number is det.
 %% TODO: add further functions and operators
 
     %% derivative_F(F,Theta,Derivative,!Epsilon) takes a function F and initial values Theta,
