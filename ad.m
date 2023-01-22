@@ -2,7 +2,6 @@
 :- interface.
 :- import_module list.
 :- import_module float.
-:- import_module map.
 
 :- type ad_number --->
    dual_number(int,       % epsilon (used for order of derivative)
@@ -113,15 +112,14 @@
 
 :- func determine_fanout(ad_number) = ad_number.
 :- func reverse_phase(ad_number, ad_number) = ad_number.
-:- pred extract_gradients(ad_number::in,
-			  map(int,ad_number)::in,
-			  map(int,ad_number)::out) is det.
+:- func extract_gradients(ad_number) = list(ad_number).
 :- func to_float(ad_number) = float.
 
 :- implementation.
 :- import_module bool.
 :- import_module math.
 :- import_module int.
+:- import_module map.
 
 make_dual_number(E, X, Xprime) = Y :-
     if Xprime = base(0.0)
@@ -283,16 +281,21 @@ reverse_phase(Sensitivity1, In) = Y :-
      Y = tape(N, E, X, Factors, Tapes, NewFanout, NewSensitivity))
     else Y = In. %% base(_) and dual_number(_,_,_)
 
-extract_gradients(In,!Map) :-
+:- pred extract_gradients_helper(ad_number::in, map(int,ad_number)::in, map(int,ad_number)::out) is det.
+extract_gradients_helper(In,!Map) :-
     In = tape(N,_,_,_,[],_, Sensitivity) ->
 	(if contains(!.Map, N)
 	 then map.det_update(N,Sensitivity+lookup(!.Map,N),!Map)
          else map.det_insert(N,Sensitivity,!Map))
     ;
     In = tape(_,_,_,_, Tapes, _, _) ->
-    list.foldl(extract_gradients, Tapes, !Map)
+    list.foldl(extract_gradients_helper, Tapes, !Map)
     ;
     !:Map = !.Map.
+
+extract_gradients(In) = Result :-
+    extract_gradients_helper(In, map.init, Map1),
+    Result = map.values(Map1).
 
 gradient_R(F,X,Y) :- gradient_R(F,X,Y,0,_).
 gradient_R(F,X,Y,!Epsilon) :-
@@ -307,8 +310,7 @@ gradient_R(F,X,Y,!Epsilon) :-
 	  Y1a = determine_fanout(Y1),
 	  Tape = reverse_phase(base(1.0),Y1a))
 	then
-	extract_gradients(Tape, map.init, Map1),
-	Y = map.values(Map1)
+	Y = extract_gradients(Tape)
 	%% Y = [Tape] % for debugging
 	else Y = []), %% base(_) and dual_number(_,_,_)
 	!:Epsilon = int.(!.Epsilon - 1).

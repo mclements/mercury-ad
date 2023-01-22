@@ -87,8 +87,8 @@ weight_gradient(F,W,Y,!Epsilon) :-
         Y1a = ad.determine_fanout(Y1),
         Tape = ad.reverse_phase(base(1.0),Y1a))
      then
-      ad.extract_gradients(Tape, map.init, Map1),
-      Y = chunk3(map.values(Map1), Nrows, Ncols)
+      List = ad.extract_gradients(Tape),
+      Y = chunk3(List, Nrows, Ncols)
      else Y = [[[]]]),
      !:Epsilon = int.(!.Epsilon - 1).
 
