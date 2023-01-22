@@ -54,5 +54,18 @@ main(!IO) :-
 			  [base(1.0),base(2.0)],Y5),
     print_line("Expected: ", !IO),
     print_line([base(0.0),base(1.0)], !IO),
-    print_line(Y5,!IO).
+    print_line(Y5,!IO),
+    multivariate_argmin_R(rosenbrock,
+			  [base(-3.0),base(4.0)],Y6),
+    print_line("Expected: ", !IO),
+    print_line([base(1.0),base(1.0)], !IO),
+    print_line(Y6,!IO).
 
+:- func rosenbrock(v_ad_number) = ad_number.
+rosenbrock(In) = Result :-
+    In = [X,Y] ->
+    A = base(1.0),
+    B = base(100.0),
+    Result = (A-X)*(A-X)+B*(Y-X*X)*(Y-X*X)
+    ;
+    Result = base(0.0).
