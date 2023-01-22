@@ -1,8 +1,25 @@
+%--------------------------------------------------%
+% vim: ft=mercury ts=4 sw=4 et
+%--------------------------------------------------%
+% Copyright (C) 2023 Mark Clements.
+% This file is distributed under the terms specified in LICENSE.
+%--------------------------------------------------%
+%
+% File: ad.m.
+% Authors: mclements
+% Stability: low.
+%
+% This module defines backward and forward automatic
+% differentiation
+%
+%--------------------------------------------------%
+
 :- module ad.
 :- interface.
 :- import_module list.
 :- import_module float.
 
+    %% main representation type
 :- type ad_number --->
    dual_number(int,       % epsilon (used for order of derivative)
 	       ad_number, % value
@@ -18,15 +35,22 @@
    ;
    base(float).
 
+    %% vector of ad_numbers
 :- type v_ad_number == list(ad_number).
+    %% matrix of ad_numbers
 :- type m_ad_number == list(list(ad_number)).
+    %% vector of floats
 :- type v_float == list(float).
+    %% matrix of floats
 :- type m_float == list(list(float)).
 
+    %% make_dual(Tag, Value, Derivative) constructs a dual_number
 :- func make_dual_number(int,ad_number,ad_number) = ad_number.
+    %% make_dual(Tag, Epsilon, Value, Factors, Tapes) constructs a tape
 :- func make_tape(int, int, ad_number, v_ad_number,
 		  v_ad_number) = ad_number.
 
+%% defined functions and predicates for differentiation
 :- func (ad_number::in) + (ad_number::in) = (ad_number::out) is det.
 :- func (ad_number::in) - (ad_number::in) = (ad_number::out) is det.
 :- func (ad_number::in) * (ad_number::in) = (ad_number::out) is det.
@@ -35,84 +59,164 @@
 :- pred (ad_number::in) =< (ad_number::in) is semidet.
 :- pred (ad_number::in) > (ad_number::in) is semidet.
 :- pred (ad_number::in) >= (ad_number::in) is semidet.
-:- pred (ad_number::in) == (ad_number::in) is semidet.
+:- pred (ad_number::in) == (ad_number::in) is semidet. % equality
 :- func exp(ad_number) = ad_number is det.
 :- func sqrt(ad_number) = ad_number is det.
 %% TODO: add further functions and operators
 
+    %% derivative_F(F,Theta,Derivative,!Epsilon) takes a function F and initial values Theta,
+    %% and returns the Derivarive, with input and output for Epsilon (accounting on the derivatives).
+    %% Uses forward differentiation.
 :- pred derivative_F((func(ad_number) = ad_number)::in, ad_number::in, ad_number::out,
 		     int::in, int::out) is det.
+    %% derivative_F(F,Theta,Derivative) takes a function F and initial values Theta,
+    %% and returns the Derivative, assuming the default derivative count.
+    %% Uses forward differentiation.
 :- pred derivative_F((func(ad_number) = ad_number)::in, ad_number::in, ad_number::out) is det.
+
+    %% gradient_F(F,Theta,Gradient,!Epsilon) takes a function F and initial values Theta,
+    %% and returns the Gradient, with input and output for Epsilon (accounting on the derivatives)
+    %% Uses forward differentiation.
 :- pred gradient_F((func(v_ad_number) = ad_number)::in,
 		   v_ad_number::in, v_ad_number::out) is det.
+    %% gradient_F(F,Theta,Gradient) takes a function F and initial values Theta,
+    %% and returns the Gradient, assuming the default derivative count.
+    %% Uses forward differentiation.
 :- pred gradient_F((func(v_ad_number) = ad_number)::in,
 		   v_ad_number::in, v_ad_number::out,
 		  int::in, int::out) is det.
+
+    %% gradient_F(F,Theta,Gradient) takes a function F and initial values Theta,
+    %% and returns the Gradient, assuming the default derivative count.
+    %% Uses backward differentiation.
 :- pred gradient_R((func(v_ad_number) = ad_number)::in,
 		   v_ad_number::in, v_ad_number::out,
 		   int::in, int::out) is det.
+    %% gradient_R(F,Theta,Gradient) takes a function F and initial values Theta,
+    %% and returns the Gradient, assuming the default derivative count.
+    %% Uses backward differentiation.
 :- pred gradient_R((func(v_ad_number) = ad_number)::in,
 		   v_ad_number::in, v_ad_number::out) is det.
 
+    %% gradient_ascent_F(F,Theta,Iterations,Eta,{Final,Objective,Derivatives})
+    %% takes a function F, initial values Theta, number of Iterations and change Epsilon,
+    %% a calculates the *maximum*, returning the Final parameters, the Objective and the Derivatives.
+    %% Uses forward differentiation.
 :- pred gradient_ascent_F((func(v_ad_number) = ad_number)::in,
 			   v_ad_number::in,
 			   int::in,
 			   float::in,
 			   {v_ad_number, ad_number, v_ad_number}::out) is det.
+    %% gradient_ascent_R(F,Theta,Iterations,Eta,{Final,Objective,Derivatives})
+    %% takes a function F, initial values Theta, number of Iterations and change Epsilon,
+    %% a calculates the *maximum*, returning the Final parameters, the Objective and the Derivatives.
+    %% Uses backward differentiation.
 :- pred gradient_ascent_R((func(v_ad_number) = ad_number)::in,
 			   v_ad_number::in,
 			   int::in,
 			   float::in,
 			   {v_ad_number, ad_number, v_ad_number}::out) is det.
+
+    %% multivariate_argmin_F(F,Theta,Final})
+    %% takes a function F and initial values Theta
+    %% and calculates the Final values for the *minimum*.
+    %% Uses forward differentiation.
 :- pred multivariate_argmin_F((func(v_ad_number) = ad_number)::in,
 			      v_ad_number::in,
 			      v_ad_number::out) is det.
+    %% multivariate_argmin_F(F,Theta,Final})
+    %% takes a function F and initial values Theta
+    %% and calculates the Final values for the *minimum*.
+    %% Uses backward differentiation.
 :- pred multivariate_argmin_R((func(v_ad_number) = ad_number)::in,
 			      v_ad_number::in,
 			      v_ad_number::out) is det.
+
+    %% multivariate_argmax_F(F,Theta,Final})
+    %% takes a function F and initial values Theta
+    %% and calculates the Final values for the *maximum*.
+    %% Uses forward differentiation.
 :- pred multivariate_argmax_F((func(v_ad_number) = ad_number)::in,
 			      v_ad_number::in,
 			      v_ad_number::out) is det.
+    %% multivariate_argmax_R(F,Theta,Final})
+    %% takes a function F and initial values Theta
+    %% and calculates the Final values for the *maximum*.
+    %% Uses backward differentiation.
 :- pred multivariate_argmax_R((func(v_ad_number) = ad_number)::in,
 			      v_ad_number::in,
 			      v_ad_number::out) is det.
+
+    %% multivariate_max_F(F,Theta,Value})
+    %% takes a function F and initial values Theta
+    %% and calculates the *maximum* Value.
+    %% Uses forward differentiation.
 :- pred multivariate_max_F((func(v_ad_number) = ad_number)::in,
 			   v_ad_number::in,
 			   ad_number::out) is det.
+    %% multivariate_max_R(F,Theta,Value})
+    %% takes a function F and initial values Theta
+    %% and calculates the *maximum* Value.
+    %% Uses backward differentiation.
 :- pred multivariate_max_R((func(v_ad_number) = ad_number)::in,
 			   v_ad_number::in,
 			   ad_number::out) is det.
 
+%% Some common utilities
+    %% sqr(X) = X*X
 :- func sqr(ad_number) = ad_number.
+    %% map_n(F,N) = list.map(F, 1..N).
 :- func map_n(func(int) = ad_number, int) = v_ad_number.
+    %% vplus(X,Y) = X + Y
 :- func vplus(v_ad_number, v_ad_number) = v_ad_number.
+    %% vminus(X,Y) = X - Y
 :- func vminus(v_ad_number, v_ad_number) = v_ad_number.
+    %% ktimesv(K,V) = K*V
 :- func ktimesv(ad_number, v_ad_number) = v_ad_number.
+    %% magnitude_squared(V) = sum_i(V[i]*V[i])
 :- func magnitude_squared(v_ad_number) = ad_number.
+    %% magnitude(V) = sqrt(sum_i(V[i]*V[i]))
 :- func magnitude(v_ad_number) = ad_number.
+    %% distance_squared(X,Y) = magnitude_sqrt(X-Y)
 :- func distance_squared(v_ad_number,v_ad_number) = ad_number.
+    %% distance(X,Y) = magnitude(X-Y)
 :- func distance(v_ad_number,v_ad_number) = ad_number.
 
+%% submodule for operations and functions on v_ad_number
 :- module ad.v.
 :- interface.
+    %% Addition
 :- func (v_ad_number::in) + (v_ad_number::in) = (v_ad_number::out) is det.
+    %% Subtraction
 :- func (v_ad_number::in) - (v_ad_number::in) = (v_ad_number::out) is det.
+    %% multiplication by a scalar
 :- func (ad_number::in) * (v_ad_number::in) = (v_ad_number::out) is det.
+    %% convert from a vector of floats
 :- func from_list(v_float) = v_ad_number.
+    %% convert of a vector of floats
 :- func to_list(v_ad_number) = v_float is det.
 :- end_module ad.v.
 
+%% submodule for operations and functions on m_ad_number
 :- module ad.m.
 :- interface.
+    %% Addition
 :- func (m_ad_number::in) + (m_ad_number::in) = (m_ad_number::out) is det.
+    %% Subtraction
 :- func (m_ad_number::in) - (m_ad_number::in) = (m_ad_number::out) is det.
+    %% convert from a matrix of floats
 :- func from_lists(m_float) = m_ad_number.
+    %% convert of a matrix of floats
 :- func to_lists(m_ad_number) = m_float is det.
 :- end_module ad.m.
 
+    %% fanout(Tape) is the fanout operation for backward differentiation 
 :- func determine_fanout(ad_number) = ad_number.
+    %% reverse_phase(Sensitivity,Tape) is the reverse pahse for backward differentiation
 :- func reverse_phase(ad_number, ad_number) = ad_number.
-:- func extract_gradients(ad_number) = list(ad_number).
+    %% extract_gradients(Tape) extracts the gradients as a vector
+:- func extract_gradients(ad_number) = v_ad_number.
+    %% to_float(Ad_number) return a float representation
 :- func to_float(ad_number) = float.
 
 :- implementation.
