@@ -87,7 +87,15 @@ main(!IO) :-
 			  [base(-3.0),base(4.0)],Y7),
     print_line("Expected: ", !IO),
     print_line([base(1.0),base(1.0)], !IO),
-    print_line(Y7,!IO).
+    print_line(Y7,!IO),
+    gradient_F(func(List) = Y :-
+		   (if List=[A,B] then Y=atan2(A,B) else Y = base(0.0)),
+		   [base(0.5),base(0.6)], Y8),
+    print_line("Expected: ", !IO),
+    Y8_Y = base(fdiff(func(Yi)=math.atan2(Yi,0.6),0.5)),
+    Y8_X = base(fdiff(func(Xi)=math.atan2(0.5,Xi),0.6)),
+    print_line([Y8_Y, Y8_X], !IO),
+    print_line(Y8,!IO).
 
 :- func rosenbrock(v_ad_number) = ad_number.
 rosenbrock(In) = Result :-
@@ -134,16 +142,20 @@ Expected:
 Expected: 
 [base(1.0), base(1.0)]
 [base(0.9999914554355536), base(0.9999828755391909)]
+Expected: 
+[base(0.9836065574087004), base(-0.8196721312081489)]
+[base(0.9836065573770492), base(-0.819672131147541)]
 #+end_example
 
 ** Documentation
 
 #+begin_src sh :exports results :results output :eval yes
-head -n 236 ad.m | tail -n 233
+head -n 241 ad.m | tail -n 239
 #+end_src
 
 #+RESULTS:
 #+begin_example
+%--------------------------------------------------%
 % Copyright (C) 2023 Mark Clements.
 % This file is distributed under the terms specified in LICENSE.
 %--------------------------------------------------%
@@ -340,6 +352,11 @@ head -n 236 ad.m | tail -n 233
 :- func distance_squared(v_ad_number,v_ad_number) = ad_number.
     %% distance(X,Y) = magnitude(X-Y)
 :- func distance(v_ad_number,v_ad_number) = ad_number.
+    %% fdiff(F,X,Eps) gives the first derivative for F at X using a
+    %% symmetric finite difference using Eps
+:- func fdiff(func(float)=float,float,float) = float.
+    %% fdiff(F,X) = fdiff(F,X,1.0e-5)
+:- func fdiff(func(float)=float,float) = float.
 
 %% submodule for operations and functions on v_ad_number
 :- module ad.v.
