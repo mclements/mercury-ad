@@ -64,7 +64,15 @@ main(!IO) :-
 			  [base(-3.0),base(4.0)],Y7),
     print_line("Expected: ", !IO),
     print_line([base(1.0),base(1.0)], !IO),
-    print_line(Y7,!IO).
+    print_line(Y7,!IO),
+    gradient_F(func(List) = Y :-
+		   (if List=[A,B] then Y=atan2(A,B) else Y = base(0.0)),
+		   [base(0.5),base(0.6)], Y8),
+    print_line("Expected: ", !IO),
+    Y8_Y = base(fdiff(func(Yi)=math.atan2(Yi,0.6),0.5)),
+    Y8_X = base(fdiff(func(Xi)=math.atan2(0.5,Xi),0.6)),
+    print_line([Y8_Y, Y8_X], !IO),
+    print_line(Y8,!IO).
 
 :- func rosenbrock(v_ad_number) = ad_number.
 rosenbrock(In) = Result :-

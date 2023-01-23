@@ -197,6 +197,11 @@
 :- func distance_squared(v_ad_number,v_ad_number) = ad_number.
     %% distance(X,Y) = magnitude(X-Y)
 :- func distance(v_ad_number,v_ad_number) = ad_number.
+    %% fdiff(F,X,Eps) gives the first derivative for F at X using a
+    %% symmetric finite difference using Eps
+:- func fdiff(func(float)=float,float,float) = float.
+    %% fdiff(F,X) = fdiff(F,X,1.0e-5)
+:- func fdiff(func(float)=float,float) = float.
 
 %% submodule for operations and functions on v_ad_number
 :- module ad.v.
@@ -266,7 +271,7 @@ pow(X,Y) = lift_real_cross_real_to_real(func(A,B) = pow(A,B),
 					func(A,B) = ln(A)*pow(A,B), X, Y).
 atan2(Y,X) = lift_real_cross_real_to_real(math.atan2,
 					  func(B,A) = A/(A*A+B*B),
-					  func(B,A) = base(0.0)-A/(A*A+B*B), Y, X).
+					  func(B,A) = base(0.0)-B/(A*A+B*B), Y, X).
 log(X,Base) = lift_real_cross_real_to_real(math.log,
 				           func(A,B) = base(1.0)/(A*ln(B)),
 					   func(A,B) = base(0.0)-ln(A)/(B*ln(B)*ln(B)), X, Base).
@@ -290,11 +295,11 @@ tan(X) = lift_real_to_real(math.tan, func(A) = base(1.0)+tan(A)*tan(A), X).
 asin(X) = lift_real_to_real(math.asin, func(A) = base(1.0)/sqrt(base(1.0)-A*A), X).
 acos(X) = lift_real_to_real(math.acos, func(A) = base(0.0) - base(1.0)/sqrt(base(1.0)-A*A), X).
 atan(X) = lift_real_to_real(math.atan, func(A) = base(1.0)/(base(1.0)+A*A), X).
-abs(X) = lift_real_to_real(float.abs,
-			   func(A) = B :- if A>=base(0.0) then B=base(1.0) else B=base(-1.0), X).
 sinh(X) = lift_real_to_real(math.sinh, cosh, X).
 cosh(X) = lift_real_to_real(math.cosh, sinh, X).
 tanh(X) = lift_real_to_real(math.tanh, func(A) = base(1.0)-tanh(A)*tanh(A), X).
+abs(X) = lift_real_to_real(float.abs,
+			   func(A) = B :- if A>=base(0.0) then B=base(1.0) else B=base(-1.0), X).
 %% TODO: add further functions and operators
 
 :- func lift_real_to_real(func(float) = float, func(ad_number) = ad_number, ad_number) =
@@ -476,6 +481,8 @@ magnitude_squared(V) = list.foldl(func(Vi,A) = A+Vi*Vi, V, base(0.0)).
 magnitude(V) = sqrt(magnitude_squared(V)).
 distance_squared(V1,V2) = magnitude_squared(vminus(V1,V2)).
 distance(V1,V2) = sqrt(distance_squared(V1,V2)).
+fdiff(F,X,Eps) = (F(X+Eps)-F(X-Eps))/2.0/Eps.
+fdiff(F,X) = fdiff(F,X,1.0e-5).
 
 :- module ad.v.
 :- implementation.
